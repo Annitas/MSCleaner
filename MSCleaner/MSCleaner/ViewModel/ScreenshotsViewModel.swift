@@ -10,6 +10,9 @@ import Photos
 
 final class ScreenshotsViewModel: ObservableObject {
     @Published var groupedImages: [Date: [ScreenshotItem]] = [:]
+    @Published var sortedDates: [Date] = []
+    
+    private let calendar = Calendar.current
     
     init() {
         fetchScreenshots()
@@ -20,6 +23,8 @@ final class ScreenshotsViewModel: ObservableObject {
             guard status == .authorized || status == .limited else { return }
             
             let fetchOptions = PHFetchOptions()
+            fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            
             let screenshotsAlbum = PHAssetCollection.fetchAssetCollections(
                 with: .smartAlbum,
                 subtype: .smartAlbumScreenshots,
@@ -35,46 +40,50 @@ final class ScreenshotsViewModel: ObservableObject {
             options.deliveryMode = .highQualityFormat
             options.isSynchronous = false
             
-            var tempScreenshots: [ScreenshotItem] = []
-            let dispatchGroup = DispatchGroup()
+            DispatchQueue.main.async {
+                self.groupedImages = [:]
+                self.sortedDates = []
+            }
             
             assets.enumerateObjects { asset, _, _ in
-                dispatchGroup.enter()
                 imageManager.requestImage(
                     for: asset,
                     targetSize: CGSize(width: 200, height: 400),
                     contentMode: .aspectFill,
                     options: options
                 ) { image, _ in
-                    defer { dispatchGroup.leave() }
                     
                     if let image = image, let creationDate = asset.creationDate {
                         let item = ScreenshotItem(
                             image: image,
                             creationDate: creationDate
                         )
-                        tempScreenshots.append(item)
+                        
+                        DispatchQueue.main.async {
+                            self.addScreenshotWithAnimation(item)
+                        }
                     }
                 }
-            }
-            dispatchGroup.notify(queue: .main) {
-                self.groupImagesByDate(tempScreenshots)
             }
         }
     }
     
-    private func groupImagesByDate(_ screenshots: [ScreenshotItem]) {
-        let calendar = Calendar.current
-        
-        let grouped = Dictionary(grouping: screenshots) { screenshot in
-            calendar.startOfDay(for: screenshot.creationDate)
+    private func addScreenshotWithAnimation(_ screenshot: ScreenshotItem) {
+        let dateKey = calendar.startOfDay(for: screenshot.creationDate)
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            if groupedImages[dateKey] == nil {
+                groupedImages[dateKey] = []
+                insertDateInSortedOrder(dateKey)
+            }
+            var currentItems = groupedImages[dateKey] ?? []
+            let insertIndex = currentItems.firstIndex { $0.creationDate < screenshot.creationDate } ?? currentItems.count
+            currentItems.insert(screenshot, at: insertIndex)
+            groupedImages[dateKey] = currentItems
         }
-        
-        var sortedGrouped: [Date: [ScreenshotItem]] = [:]
-        for (date, items) in grouped {
-            sortedGrouped[date] = items.sorted { $0.creationDate > $1.creationDate }
-        }
-        
-        self.groupedImages = sortedGrouped
+    }
+    
+    private func insertDateInSortedOrder(_ date: Date) {
+        let insertIndex = sortedDates.firstIndex { $0 < date } ?? sortedDates.count
+        sortedDates.insert(date, at: insertIndex)
     }
 }
