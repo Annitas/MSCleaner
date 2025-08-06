@@ -117,7 +117,7 @@ final class ScreenshotsViewModel: ObservableObject {
            let fp2 = featurePrintForImage(image: secondImage) {
             try? fp1.computeDistance(&distance, to: fp2)
         }
-        return distance <= 0.5
+        return distance <= 0.3
     }
     
     private func featurePrintForImage(image: UIImage) -> VNFeaturePrintObservation? {
