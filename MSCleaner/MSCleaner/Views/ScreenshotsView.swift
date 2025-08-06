@@ -12,16 +12,39 @@ struct ScreenshotsView: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack {
-                ForEach(viewModel.images, id: \.self) { image in
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .cornerRadius(8)
-                        .padding()
+            ForEach(viewModel.groupedImages.keys.sorted(by: >), id: \.self) { date in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(formatDate(date))
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 16)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(spacing: 16),
+                        GridItem(spacing: 16)
+                    ], spacing: 8) {
+                        ForEach(viewModel.groupedImages[date] ?? [], id: \.id) { item in
+                            Image(uiImage: item.image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 200, height: 200)
+                                .clipped()
+                                .cornerRadius(8)
+                                .shadow(radius: 3)
+                        }
+                    }
+                    .padding(.horizontal, 16)
                 }
             }
         }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        formatter.timeStyle = .none
+        formatter.locale = Locale(identifier: "en_EN")
+        return formatter.string(from: date)
     }
 }
 
