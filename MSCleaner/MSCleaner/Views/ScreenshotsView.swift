@@ -8,8 +8,20 @@
 import SwiftUI
 
 struct ScreenshotsView: View {
+    @StateObject private var viewModel = ScreenshotsViewModel()
+    
     var body: some View {
-        Text("New")
+        ScrollView {
+            LazyVStack {
+                ForEach(viewModel.images, id: \.self) { image in
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .cornerRadius(8)
+                        .padding()
+                }
+            }
+        }
     }
 }
 
