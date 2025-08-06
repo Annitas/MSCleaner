@@ -32,8 +32,6 @@ struct ScreenshotsView: View {
                                     .clipped()
                                     .cornerRadius(8)
                                     .shadow(radius: 3)
-                                    .scaleEffect(1.0)
-                                    .opacity(1.0)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -42,7 +40,6 @@ struct ScreenshotsView: View {
             }
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.sortedDates.count)
-        .animation(.spring(response: 0.3, dampingFraction: 0.9), value: viewModel.groupedImages.values.flatMap { $0 }.count)
     }
     
     private func formatDate(_ date: Date) -> String {
