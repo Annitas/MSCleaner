@@ -7,9 +7,15 @@
 
 import SwiftUI
 import Photos
+import Vision
+
+struct ScreenshotDuplicateGroup: Identifiable {
+    let id = UUID()
+    let duplicates: [ScreenshotItem]
+}
 
 final class ScreenshotsViewModel: ObservableObject {
-    @Published var groupedImages: [Date: [ScreenshotItem]] = [:]
+    @Published var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
     @Published var sortedDates: [Date] = []
     
     private let calendar = Calendar.current
@@ -39,49 +45,87 @@ final class ScreenshotsViewModel: ObservableObject {
         )
         
         guard let collection = screenshotsAlbum.firstObject else { return }
-        
         let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
         
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .highQualityFormat
-        options.isSynchronous = false
+        let requestOptions = PHImageRequestOptions()
+        requestOptions.deliveryMode = .highQualityFormat
+        requestOptions.isSynchronous = false
         
-        DispatchQueue.main.async {
-            self.groupedImages = [:]
-            self.sortedDates = []
-        }
-        
-        assets.enumerateObjects { asset, _, _ in
-            guard let creationDate = asset.creationDate else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            var groupedByDate: [Date: [ScreenshotItem]] = [:]
+            let group = DispatchGroup()
             
-            let dateKey = self.calendar.startOfDay(for: creationDate)
-            
-            self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 200, height: 400),
-                                           contentMode: .aspectFill, options: options) { image, _ in
-                guard let image = image else { return }
-                let item = ScreenshotItem(image: image, creationDate: creationDate)
-                DispatchQueue.main.async {
-                    self.addScreenshotWithAnimation(item, to: dateKey)
+            assets.enumerateObjects { asset, _, _ in
+                guard let creationDate = asset.creationDate else { return }
+                let dateKey = self.calendar.startOfDay(for: creationDate)
+                
+                group.enter()
+                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { image, _ in
+                    defer { group.leave() }
+                    guard let image = image else { return }
+                    let item = ScreenshotItem(image: image, creationDate: creationDate)
+                    
+                    groupedByDate[dateKey, default: []].append(item)
                 }
             }
-        }
-    }
-    
-    private func addScreenshotWithAnimation(_ screenshot: ScreenshotItem, to dateKey: Date) {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-            if groupedImages[dateKey] == nil {
-                groupedImages[dateKey] = []
-                insertDateInSortedOrder(dateKey)
+            
+            group.notify(queue: .main) {
+                self.processDuplicates(from: groupedByDate)
             }
-            var currentItems = groupedImages[dateKey] ?? []
-            let insertIndex = currentItems.firstIndex { $0.creationDate < screenshot.creationDate } ?? currentItems.count
-            currentItems.insert(screenshot, at: insertIndex)
-            groupedImages[dateKey] = currentItems
         }
     }
     
-    private func insertDateInSortedOrder(_ date: Date) {
-        let insertIndex = sortedDates.firstIndex { $0 < date } ?? sortedDates.count
-        sortedDates.insert(date, at: insertIndex)
+    private func processDuplicates(from grouped: [Date: [ScreenshotItem]]) {
+        var result: [Date: [ScreenshotDuplicateGroup]] = [:]
+        var sortedDates: [Date] = []
+        
+        for (date, items) in grouped {
+            var visited = Set<Int>()
+            var groups: [ScreenshotDuplicateGroup] = []
+            
+            for i in 0..<items.count {
+                guard !visited.contains(i) else { continue }
+                var group = [items[i]]
+                visited.insert(i)
+                
+                for j in (i + 1)..<items.count {
+                    guard !visited.contains(j) else { continue }
+                    if isSimilarPhotos(firstImage: items[i].image, secondImage: items[j].image) {
+                        group.append(items[j])
+                        visited.insert(j)
+                    }
+                }
+                
+                if group.count > 1 {
+                    groups.append(ScreenshotDuplicateGroup(duplicates: group))
+                }
+            }
+            
+            if !groups.isEmpty {
+                result[date] = groups
+                sortedDates.append(date)
+            }
+        }
+        
+        self.groupedDuplicates = result
+        self.sortedDates = sortedDates.sorted(by: >)
+    }
+    
+    private func isSimilarPhotos(firstImage: UIImage, secondImage: UIImage) -> Bool {
+        var distance: Float = 0
+        if let fp1 = featurePrintForImage(image: firstImage),
+           let fp2 = featurePrintForImage(image: secondImage) {
+            try? fp1.computeDistance(&distance, to: fp2)
+        }
+        return distance <= 0.5
+    }
+    
+    private func featurePrintForImage(image: UIImage) -> VNFeaturePrintObservation? {
+        guard let cgImage = image.cgImage else { return nil }
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        let request = VNGenerateImageFeaturePrintRequest()
+        try? handler.perform([request])
+        return request.results?.first as? VNFeaturePrintObservation
     }
 }
+

@@ -14,27 +14,32 @@ struct ScreenshotsView: View {
         ScrollView {
             LazyVStack(spacing: 20) {
                 ForEach(viewModel.sortedDates, id: \.self) { date in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(formatDate(date))
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 16)
-                        
-                        LazyVGrid(columns: [
-                            GridItem(spacing: 16),
-                            GridItem(spacing: 16)
-                        ], spacing: 8) {
-                            ForEach(viewModel.groupedImages[date] ?? [], id: \.id) { item in
-                                Image(uiImage: item.image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 200, height: 200)
-                                    .clipped()
-                                    .cornerRadius(8)
-                                    .shadow(radius: 3)
+                    if let groups = viewModel.groupedDuplicates[date] {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(formatDate(date))
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 16)
+                            
+                            ForEach(groups) { group in
+                                LazyVGrid(columns: [
+                                    GridItem(spacing: 16),
+                                    GridItem(spacing: 16)
+                                ], spacing: 8) {
+                                    ForEach(group.duplicates, id: \.id) { item in
+                                        Image(uiImage: item.image)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 200, height: 200)
+                                            .clipped()
+                                            .cornerRadius(8)
+                                            .shadow(radius: 3)
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 12)
                             }
                         }
-                        .padding(.horizontal, 16)
                     }
                 }
             }
@@ -51,6 +56,7 @@ struct ScreenshotsView: View {
     }
 }
 
-#Preview {
-    ScreenshotsView()
-}
+
+//#Preview {
+//    ScreenshotsView()
+//}
