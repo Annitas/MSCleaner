@@ -19,6 +19,7 @@ final class ScreenshotsViewModel: ObservableObject {
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     
     private let processingQueue = OperationQueue()
+    let syncQueue = DispatchQueue(label: "groupedByDate.sync")
     
     init() {
         processingQueue.maxConcurrentOperationCount = 4
@@ -56,11 +57,13 @@ final class ScreenshotsViewModel: ObservableObject {
                 let dateKey = self.calendar.startOfDay(for: creationDate)
                 
                 group.enter()
-                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { image, _ in
+                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { [weak self] image, _ in
                     defer { group.leave() }
-                    guard let image = image else { return }
+                    guard let self = self, let image = image else { return }
                     let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
-                    groupedByDate[dateKey, default: []].append(item)
+                    syncQueue.sync {
+                        groupedByDate[dateKey, default: []].append(item)
+                    }
                 }
             }
             
