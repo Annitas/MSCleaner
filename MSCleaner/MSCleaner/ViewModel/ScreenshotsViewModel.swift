@@ -20,6 +20,12 @@ final class ScreenshotsViewModel: ObservableObject {
     
     private let calendar = Calendar.current
     private let imageManager = PHCachingImageManager()
+    private let processingQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "PhotoComparisonQueue"
+        queue.maxConcurrentOperationCount = 2
+        return queue
+    }()
     
     init() {
         fetchScreenshots()
@@ -70,45 +76,52 @@ final class ScreenshotsViewModel: ObservableObject {
             }
             
             group.notify(queue: .main) {
-                self.processDuplicates(from: groupedByDate)
+                self.processDuplicatesAsync(from: groupedByDate)
             }
         }
     }
     
-    private func processDuplicates(from grouped: [Date: [ScreenshotItem]]) {
-        var result: [Date: [ScreenshotDuplicateGroup]] = [:]
-        var sortedDates: [Date] = []
-        
+    func processDuplicatesAsync(from grouped: [Date: [ScreenshotItem]]) {
         for (date, items) in grouped {
-            var visited = Set<Int>()
-            var groups: [ScreenshotDuplicateGroup] = []
-            
-            for i in 0..<items.count {
-                guard !visited.contains(i) else { continue }
-                var group = [items[i]]
-                visited.insert(i)
+            let operation = BlockOperation {
+                let result = self.findDuplicates(in: items)
+                guard !result.isEmpty else { return }
                 
-                for j in (i + 1)..<items.count {
-                    guard !visited.contains(j) else { continue }
-                    if isSimilarPhotos(firstImage: items[i].image, secondImage: items[j].image) {
-                        group.append(items[j])
-                        visited.insert(j)
+                Task { @MainActor in
+                    self.groupedDuplicates[date, default: []].append(contentsOf: result)
+                    
+                    if !self.sortedDates.contains(date) {
+                        self.sortedDates.append(date)
+                        self.sortedDates.sort(by: >)
                     }
                 }
-                
-                if group.count > 1 {
-                    groups.append(ScreenshotDuplicateGroup(duplicates: group))
+            }
+            processingQueue.addOperation(operation)
+        }
+    }
+    
+    private func findDuplicates(in items: [ScreenshotItem]) -> [ScreenshotDuplicateGroup] {
+        var visited = Set<Int>()
+        var results: [ScreenshotDuplicateGroup] = []
+        
+        for i in 0..<items.count {
+            guard !visited.contains(i) else { continue }
+            var group = [items[i]]
+            visited.insert(i)
+            
+            for j in (i + 1)..<items.count {
+                guard !visited.contains(j) else { continue }
+                if isSimilarPhotos(firstImage: items[i].image, secondImage: items[j].image) {
+                    group.append(items[j])
+                    visited.insert(j)
                 }
             }
             
-            if !groups.isEmpty {
-                result[date] = groups
-                sortedDates.append(date)
+            if group.count > 1 {
+                results.append(ScreenshotDuplicateGroup(duplicates: group))
             }
         }
-        
-        self.groupedDuplicates = result
-        self.sortedDates = sortedDates.sorted(by: >)
+        return results
     }
     
     private func isSimilarPhotos(firstImage: UIImage, secondImage: UIImage) -> Bool {
