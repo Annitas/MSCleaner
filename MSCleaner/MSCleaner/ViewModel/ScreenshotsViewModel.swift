@@ -9,11 +9,6 @@ import SwiftUI
 import Photos
 import Vision
 
-struct ScreenshotDuplicateGroup: Identifiable {
-    let id = UUID()
-    let duplicates: [ScreenshotItem]
-}
-
 final class ScreenshotsViewModel: ObservableObject {
     @Published var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
     @Published var sortedDates: [Date] = []
@@ -69,7 +64,7 @@ final class ScreenshotsViewModel: ObservableObject {
                 self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { image, _ in
                     defer { group.leave() }
                     guard let image = image else { return }
-                    let item = ScreenshotItem(image: image, creationDate: creationDate)
+                    let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
                     
                     groupedByDate[dateKey, default: []].append(item)
                 }
