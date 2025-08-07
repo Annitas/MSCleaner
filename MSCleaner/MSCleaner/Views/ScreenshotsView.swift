@@ -6,12 +6,21 @@
 //
 
 import SwiftUI
+import Photos
 
 struct ScreenshotsView: View {
     @StateObject private var viewModel = ScreenshotsViewModel()
     
     var body: some View {
-        VStack {
+        let photos = viewModel.groupedDuplicates.values.flatMap { $0.flatMap { $0.duplicates } }
+        let resources = photos.flatMap { PHAssetResource.assetResources(for: $0.asset) }
+            .filter { $0.type == .photo }
+            .reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
+        let totalSizeGB = Double(resources) / (1024 * 1024 * 1000)
+
+        VStack(alignment: .leading) {
+            Text("\(photos.count) photos (\(String(format: "%.2f", totalSizeGB)) GB)")
+                .padding(16)
             ScrollView {
                 LazyVStack(spacing: 20) {
                     ForEach(viewModel.sortedDates, id: \.self) { date in
@@ -86,6 +95,7 @@ struct ScreenshotsView: View {
             .padding(.horizontal)
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.sortedDates.count)
+        .navigationTitle("Similar Photos")
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -97,6 +107,6 @@ struct ScreenshotsView: View {
     }
 }
 
-#Preview {
-    ScreenshotsView()
-}
+//#Preview {
+//    ScreenshotsView()
+//}

@@ -51,12 +51,12 @@ final class ScreenshotsViewModel: ObservableObject {
             var groupedByDate: [Date: [ScreenshotItem]] = [:]
             let group = DispatchGroup()
             
-            assets.enumerateObjects { asset, _, _ in
-                guard let creationDate = asset.creationDate else { return }
+            assets.enumerateObjects { [weak self] asset, _, _ in
+                guard let self = self, let creationDate = asset.creationDate else { return }
                 let dateKey = self.calendar.startOfDay(for: creationDate)
                 
                 group.enter()
-                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 200, height: 200), contentMode: .aspectFill, options: requestOptions) { image, _ in
+                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { image, _ in
                     defer { group.leave() }
                     guard let image = image else { return }
                     let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
