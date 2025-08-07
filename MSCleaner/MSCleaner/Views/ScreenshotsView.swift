@@ -86,7 +86,7 @@ struct ScreenshotsView: View {
             Button(action: {
                 viewModel.deleteSelected()
             }) {
-                Text("Delete \(viewModel.selectedItemCount) photos")
+                Text("Delete \(viewModel.selectedItemCount) photos (\(String(format: "%.2f GB)", Double(viewModel.deletedDataAmount) / (1024 * 1024 * 1000)))")
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, minHeight: 56)
                     .background(Color.blue)

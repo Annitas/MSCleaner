@@ -13,13 +13,13 @@ final class ScreenshotsViewModel: ObservableObject {
     @Published var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
     @Published var sortedDates: [Date] = []
     @Published var selectedItemCount = 0
+    @Published var deletedDataAmount: Int64 = 0
     
     private let calendar = Calendar.current
     private let imageManager = PHCachingImageManager()
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     
     private let processingQueue = OperationQueue()
-    let syncQueue = DispatchQueue(label: "groupedByDate.sync")
     
     init() {
         processingQueue.maxConcurrentOperationCount = 4
@@ -61,9 +61,7 @@ final class ScreenshotsViewModel: ObservableObject {
                     defer { group.leave() }
                     guard let self = self, let image = image else { return }
                     let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
-                    syncQueue.sync {
-                        groupedByDate[dateKey, default: []].append(item)
-                    }
+                    groupedByDate[dateKey, default: []].append(item)
                 }
             }
             
@@ -148,9 +146,14 @@ final class ScreenshotsViewModel: ObservableObject {
                 for itemIndex in groupedDuplicates[date]![groupIndex].duplicates.indices {
                     if groupedDuplicates[date]![groupIndex].duplicates[itemIndex].id == item.id {
                         groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected.toggle()
+                        let photoData = PHAssetResource.assetResources(for: item.asset)
+                            .filter { $0.type == .photo }
+                            .reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
                         if groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected {
+                            deletedDataAmount += photoData
                             selectedItemCount += 1
                         } else {
+                            deletedDataAmount -= photoData
                             selectedItemCount -= 1
                         }
                         objectWillChange.send()
