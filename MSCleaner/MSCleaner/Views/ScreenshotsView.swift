@@ -46,11 +46,21 @@ struct ScreenshotsView: View {
                                                     .cornerRadius(8)
                                                     .shadow(radius: 3)
                                                 
-                                                Circle()
-                                                    .strokeBorder(Color.white, lineWidth: 2)
-                                                    .background(Circle().fill(item.isSelected ? Color.blue : Color.white.opacity(0.7)))
-                                                    .frame(width: 24, height: 24)
-                                                    .padding(6)
+                                                ZStack {
+                                                    Circle()
+                                                        .fill(item.isSelected ? Color.blue : Color.white.opacity(0.7))
+                                                        .frame(width: 24, height: 24)
+                                                        .overlay(
+                                                            Circle().stroke(Color.white, lineWidth: 2)
+                                                        )
+                                                    
+                                                    if item.isSelected {
+                                                        Image(systemName: "checkmark")
+                                                            .foregroundColor(.white)
+                                                            .font(.system(size: 12, weight: .bold))
+                                                    }
+                                                }
+                                                .padding(6)
                                             }
                                         }
                                     }
