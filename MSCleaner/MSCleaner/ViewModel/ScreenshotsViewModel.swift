@@ -18,7 +18,10 @@ final class ScreenshotsViewModel: ObservableObject {
     private let imageManager = PHCachingImageManager()
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     
+    private let processingQueue = OperationQueue()
+    
     init() {
+        processingQueue.maxConcurrentOperationCount = 4
         fetchScreenshots()
     }
     
@@ -68,15 +71,14 @@ final class ScreenshotsViewModel: ObservableObject {
     }
     
     func processDuplicatesAsync(from grouped: [Date: [ScreenshotItem]]) {
-        Task.detached(priority: .userInitiated) {
-            for (date, items) in grouped {
-                await self.processDuplicates(for: date, items: items)
+        for (date, items) in grouped {
+            processingQueue.addOperation {
+                self.processDuplicates(for: date, items: items)
             }
         }
     }
     
-    @MainActor
-    private func processDuplicates(for date: Date, items: [ScreenshotItem]) async {
+    private func processDuplicates(for date: Date, items: [ScreenshotItem]) {
         var visited = Set<Int>()
         var dateGroups: [ScreenshotDuplicateGroup] = []
         
@@ -99,10 +101,12 @@ final class ScreenshotsViewModel: ObservableObject {
         }
         
         if !dateGroups.isEmpty {
-            groupedDuplicates[date] = dateGroups
-            if !sortedDates.contains(date) {
-                sortedDates.append(date)
-                sortedDates.sort(by: >)
+            Task { @MainActor in
+                self.groupedDuplicates[date] = dateGroups
+                if !self.sortedDates.contains(date) {
+                    self.sortedDates.append(date)
+                    self.sortedDates.sort(by: >)
+                }
             }
         }
     }
