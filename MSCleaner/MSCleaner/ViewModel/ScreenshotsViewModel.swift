@@ -20,6 +20,7 @@ final class ScreenshotsViewModel: ObservableObject {
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     
     private let processingQueue = OperationQueue()
+    private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
     
     init() {
         processingQueue.maxConcurrentOperationCount = 4
@@ -51,6 +52,7 @@ final class ScreenshotsViewModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async {
             var groupedByDate: [Date: [ScreenshotItem]] = [:]
             let group = DispatchGroup()
+            let lock = NSLock()
             
             assets.enumerateObjects { [weak self] asset, _, _ in
                 guard let self = self, let creationDate = asset.creationDate else { return }
@@ -58,10 +60,16 @@ final class ScreenshotsViewModel: ObservableObject {
                 
                 group.enter()
                 self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { [weak self] image, _ in
-                    defer { group.leave() }
-                    guard let self = self, let image = image else { return }
+                    guard let self = self, let image = image else {
+                        group.leave()
+                        return
+                    }
+                    
                     let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
+                    lock.lock()
                     groupedByDate[dateKey, default: []].append(item)
+                    lock.unlock()
+                    group.leave()
                 }
             }
             
@@ -73,8 +81,8 @@ final class ScreenshotsViewModel: ObservableObject {
     
     func processDuplicatesAsync(from grouped: [Date: [ScreenshotItem]]) {
         for (date, items) in grouped {
-            processingQueue.addOperation {
-                self.processDuplicates(for: date, items: items)
+            processingQueue.addOperation { [weak self] in
+                self?.processDuplicates(for: date, items: items)
             }
         }
     }
@@ -103,7 +111,17 @@ final class ScreenshotsViewModel: ObservableObject {
         
         if !dateGroups.isEmpty {
             Task { @MainActor in
-                self.groupedDuplicates[date] = dateGroups
+                self.updateGroupedDuplicates(date: date, groups: dateGroups)
+            }
+        }
+    }
+    
+    @MainActor
+    private func updateGroupedDuplicates(date: Date, groups: [ScreenshotDuplicateGroup]) {
+        groupedDuplicates[date] = groups
+        sortedDatesQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
                 if !self.sortedDates.contains(date) {
                     self.sortedDates.append(date)
                     self.sortedDates.sort(by: >)
@@ -114,9 +132,14 @@ final class ScreenshotsViewModel: ObservableObject {
     
     private func isSimilarPhotos(firstItem: ScreenshotItem, secondItem: ScreenshotItem) -> Bool {
         var distance: Float = 0
-        if let fp1 = featurePrintForImage(image: firstItem.image, cacheKey: firstItem.asset.localIdentifier),
-           let fp2 = featurePrintForImage(image: secondItem.image, cacheKey: secondItem.asset.localIdentifier) {
-            try? fp1.computeDistance(&distance, to: fp2)
+        do {
+            if let fp1 = featurePrintForImage(image: firstItem.image, cacheKey: firstItem.asset.localIdentifier),
+               let fp2 = featurePrintForImage(image: secondItem.image, cacheKey: secondItem.asset.localIdentifier) {
+                try fp1.computeDistance(&distance, to: fp2)
+            }
+        } catch {
+            print("!!! Error isSimilarPhotos")
+            return false
         }
         return distance <= 0.3
     }
@@ -129,11 +152,15 @@ final class ScreenshotsViewModel: ObservableObject {
         guard let cgImage = image.cgImage else { return nil }
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         let request = VNGenerateImageFeaturePrintRequest()
-        try? handler.perform([request])
         
-        if let result = request.results?.first as? VNFeaturePrintObservation {
-            Self.sharedFeatureCache.setObject(result, forKey: cacheKey as NSString)
-            return result
+        do {
+            try handler.perform([request])
+            if let result = request.results?.first as? VNFeaturePrintObservation {
+                Self.sharedFeatureCache.setObject(result, forKey: cacheKey as NSString)
+                return result
+            }
+        } catch {
+            print("!!! Error featurePrintForImage: \(error)")
         }
         
         return nil
@@ -141,27 +168,61 @@ final class ScreenshotsViewModel: ObservableObject {
     
     @MainActor
     func toggleSelection(for item: ScreenshotItem) {
+        guard let (date, groupIndex, itemIndex) = findItemIndices(for: item) else { return }
+        guard let groups = groupedDuplicates[date], groupIndex < groups.count, itemIndex < groups[groupIndex].duplicates.count else {
+            print("!!! Error toggleSelection")
+            return
+        }
+        
+        groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected.toggle()
+        
+        let isSelected = groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected
+        let photoDataSize = getAssetFileSize(for: item.asset)
+        
+        if isSelected {
+            deletedDataAmount += photoDataSize
+            selectedItemCount += 1
+        } else {
+            deletedDataAmount -= photoDataSize
+            selectedItemCount -= 1
+        }
+        
+        objectWillChange.send()
+    }
+    
+    private func findItemIndices(for item: ScreenshotItem) -> (Date, Int, Int)? {
         for (date, groups) in groupedDuplicates {
-            for groupIndex in groups.indices {
-                for itemIndex in groupedDuplicates[date]![groupIndex].duplicates.indices {
-                    if groupedDuplicates[date]![groupIndex].duplicates[itemIndex].id == item.id {
-                        groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected.toggle()
-                        let photoData = PHAssetResource.assetResources(for: item.asset)
-                            .filter { $0.type == .photo }
-                            .reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
-                        if groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected {
-                            deletedDataAmount += photoData
-                            selectedItemCount += 1
-                        } else {
-                            deletedDataAmount -= photoData
-                            selectedItemCount -= 1
-                        }
-                        objectWillChange.send()
-                        return
+            for (groupIndex, group) in groups.enumerated() {
+                for (itemIndex, duplicate) in group.duplicates.enumerated() {
+                    if duplicate.id == item.id {
+                        return (date, groupIndex, itemIndex)
                     }
                 }
             }
         }
+        return nil
+    }
+    
+    private func getAssetFileSize(for asset: PHAsset) -> Int64 {
+        let resources = PHAssetResource.assetResources(for: asset)
+        if let imageResource = resources.first(where: { $0.type == .photo }) {
+            let requestOptions = PHImageRequestOptions()
+            requestOptions.isSynchronous = true
+            requestOptions.deliveryMode = .fastFormat
+            
+            var fileSize: Int64 = 0
+            let semaphore = DispatchSemaphore(value: 0)
+            
+            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: requestOptions) { data, _, _, _ in
+                fileSize = Int64(data?.count ?? 0)
+                semaphore.signal()
+            }
+            
+            _ = semaphore.wait(timeout: .now() + 2.0)
+            return fileSize
+        }
+        
+        return 0
     }
     
     @MainActor
@@ -180,15 +241,21 @@ final class ScreenshotsViewModel: ObservableObject {
         
         PHPhotoLibrary.shared().performChanges({
             PHAssetChangeRequest.deleteAssets(assetsToDelete as NSArray)
-        }) { success, error in
+        }) { [weak self] success, error in
             DispatchQueue.main.async {
                 if success {
-                    print("Deleted selected items")
-                    self.fetchScreenshots()
+                    self?.resetSelection()
+                    self?.fetchScreenshots()
                 } else if let error = error {
-                    print("Deletion failed: \(error)")
+                    print("!!! Error deleteSelected")
                 }
             }
         }
+    }
+    
+    @MainActor
+    private func resetSelection() {
+        selectedItemCount = 0
+        deletedDataAmount = 0
     }
 }
