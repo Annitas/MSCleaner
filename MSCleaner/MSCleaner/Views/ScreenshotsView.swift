@@ -60,6 +60,7 @@ struct ScreenshotsView: View {
                                                             .font(.system(size: 12, weight: .bold))
                                                     }
                                                 }
+                                                .shadow(radius: 3)
                                                 .padding(6)
                                             }
                                         }
