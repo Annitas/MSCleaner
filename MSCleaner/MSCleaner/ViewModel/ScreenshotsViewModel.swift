@@ -12,6 +12,7 @@ import Vision
 final class ScreenshotsViewModel: ObservableObject {
     @Published var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
     @Published var sortedDates: [Date] = []
+    @Published var selectedItemCount = 0
     
     private let calendar = Calendar.current
     private let imageManager = PHCachingImageManager()
@@ -140,6 +141,11 @@ final class ScreenshotsViewModel: ObservableObject {
                 for itemIndex in groupedDuplicates[date]![groupIndex].duplicates.indices {
                     if groupedDuplicates[date]![groupIndex].duplicates[itemIndex].id == item.id {
                         groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected.toggle()
+                        if groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected {
+                            selectedItemCount += 1
+                        } else {
+                            selectedItemCount -= 1
+                        }
                         objectWillChange.send()
                         return
                     }

@@ -63,10 +63,16 @@ struct ScreenshotsView: View {
                 }
             }
             
-            Button("Delete Selected") {
+            Button(action: {
                 viewModel.deleteSelected()
+            }) {
+                Text("Delete \(viewModel.selectedItemCount) photos")
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(Color.blue)
+                    .cornerRadius(8)
             }
-            .padding()
+            .padding(.horizontal)
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.sortedDates.count)
     }
@@ -80,6 +86,6 @@ struct ScreenshotsView: View {
     }
 }
 
-//#Preview {
-//    ScreenshotsView()
-//}
+#Preview {
+    ScreenshotsView()
+}
