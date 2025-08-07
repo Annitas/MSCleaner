@@ -15,12 +15,7 @@ final class ScreenshotsViewModel: ObservableObject {
     
     private let calendar = Calendar.current
     private let imageManager = PHCachingImageManager()
-    private let processingQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "PhotoComparisonQueue"
-        queue.maxConcurrentOperationCount = 2
-        return queue
-    }()
+    private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     
     init() {
         fetchScreenshots()
@@ -39,11 +34,7 @@ final class ScreenshotsViewModel: ObservableObject {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         
-        let screenshotsAlbum = PHAssetCollection.fetchAssetCollections(
-            with: .smartAlbum,
-            subtype: .smartAlbumScreenshots,
-            options: nil
-        )
+        let screenshotsAlbum = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumScreenshots, options: nil)
         
         guard let collection = screenshotsAlbum.firstObject else { return }
         let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
@@ -61,11 +52,10 @@ final class ScreenshotsViewModel: ObservableObject {
                 let dateKey = self.calendar.startOfDay(for: creationDate)
                 
                 group.enter()
-                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { image, _ in
+                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 200, height: 200), contentMode: .aspectFill, options: requestOptions) { image, _ in
                     defer { group.leave() }
                     guard let image = image else { return }
                     let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
-                    
                     groupedByDate[dateKey, default: []].append(item)
                 }
             }
@@ -77,27 +67,17 @@ final class ScreenshotsViewModel: ObservableObject {
     }
     
     func processDuplicatesAsync(from grouped: [Date: [ScreenshotItem]]) {
-        for (date, items) in grouped {
-            let operation = BlockOperation {
-                let result = self.findDuplicates(in: items)
-                guard !result.isEmpty else { return }
-                
-                Task { @MainActor in
-                    self.groupedDuplicates[date, default: []].append(contentsOf: result)
-                    
-                    if !self.sortedDates.contains(date) {
-                        self.sortedDates.append(date)
-                        self.sortedDates.sort(by: >)
-                    }
-                }
+        Task.detached(priority: .userInitiated) {
+            for (date, items) in grouped {
+                await self.processDuplicates(for: date, items: items)
             }
-            processingQueue.addOperation(operation)
         }
     }
     
-    private func findDuplicates(in items: [ScreenshotItem]) -> [ScreenshotDuplicateGroup] {
+    @MainActor
+    private func processDuplicates(for date: Date, items: [ScreenshotItem]) async {
         var visited = Set<Int>()
-        var results: [ScreenshotDuplicateGroup] = []
+        var dateGroups: [ScreenshotDuplicateGroup] = []
         
         for i in 0..<items.count {
             guard !visited.contains(i) else { continue }
@@ -106,34 +86,93 @@ final class ScreenshotsViewModel: ObservableObject {
             
             for j in (i + 1)..<items.count {
                 guard !visited.contains(j) else { continue }
-                if isSimilarPhotos(firstImage: items[i].image, secondImage: items[j].image) {
+                if isSimilarPhotos(firstItem: items[i], secondItem: items[j]) {
                     group.append(items[j])
                     visited.insert(j)
                 }
             }
             
             if group.count > 1 {
-                results.append(ScreenshotDuplicateGroup(duplicates: group))
+                dateGroups.append(ScreenshotDuplicateGroup(duplicates: group))
             }
         }
-        return results
+        
+        if !dateGroups.isEmpty {
+            groupedDuplicates[date] = dateGroups
+            if !sortedDates.contains(date) {
+                sortedDates.append(date)
+                sortedDates.sort(by: >)
+            }
+        }
     }
     
-    private func isSimilarPhotos(firstImage: UIImage, secondImage: UIImage) -> Bool {
+    private func isSimilarPhotos(firstItem: ScreenshotItem, secondItem: ScreenshotItem) -> Bool {
         var distance: Float = 0
-        if let fp1 = featurePrintForImage(image: firstImage),
-           let fp2 = featurePrintForImage(image: secondImage) {
+        if let fp1 = featurePrintForImage(image: firstItem.image, cacheKey: firstItem.asset.localIdentifier),
+           let fp2 = featurePrintForImage(image: secondItem.image, cacheKey: secondItem.asset.localIdentifier) {
             try? fp1.computeDistance(&distance, to: fp2)
         }
         return distance <= 0.3
     }
     
-    private func featurePrintForImage(image: UIImage) -> VNFeaturePrintObservation? {
+    private func featurePrintForImage(image: UIImage, cacheKey: String) -> VNFeaturePrintObservation? {
+        if let cached = Self.sharedFeatureCache.object(forKey: cacheKey as NSString) {
+            return cached
+        }
+        
         guard let cgImage = image.cgImage else { return nil }
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         let request = VNGenerateImageFeaturePrintRequest()
         try? handler.perform([request])
-        return request.results?.first as? VNFeaturePrintObservation
+        
+        if let result = request.results?.first as? VNFeaturePrintObservation {
+            Self.sharedFeatureCache.setObject(result, forKey: cacheKey as NSString)
+            return result
+        }
+        
+        return nil
+    }
+    
+    @MainActor
+    func toggleSelection(for item: ScreenshotItem) {
+        for (date, groups) in groupedDuplicates {
+            for groupIndex in groups.indices {
+                for itemIndex in groupedDuplicates[date]![groupIndex].duplicates.indices {
+                    if groupedDuplicates[date]![groupIndex].duplicates[itemIndex].id == item.id {
+                        groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected.toggle()
+                        objectWillChange.send()
+                        return
+                    }
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    func deleteSelected() {
+        var assetsToDelete: [PHAsset] = []
+        
+        for groups in groupedDuplicates.values {
+            for group in groups {
+                for item in group.duplicates where item.isSelected {
+                    assetsToDelete.append(item.asset)
+                }
+            }
+        }
+        
+        guard !assetsToDelete.isEmpty else { return }
+        
+        PHPhotoLibrary.shared().performChanges({
+            PHAssetChangeRequest.deleteAssets(assetsToDelete as NSArray)
+        }) { success, error in
+            DispatchQueue.main.async {
+                if success {
+                    print("Deleted selected items")
+                    self.fetchScreenshots()
+                } else if let error = error {
+                    print("Deletion failed: \(error)")
+                }
+            }
+        }
     }
 }
-

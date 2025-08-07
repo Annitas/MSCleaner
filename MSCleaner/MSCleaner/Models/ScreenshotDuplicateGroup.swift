@@ -9,5 +9,5 @@ import Foundation
 
 struct ScreenshotDuplicateGroup: Identifiable {
     let id = UUID()
-    let duplicates: [ScreenshotItem]
+    var duplicates: [ScreenshotItem]
 }

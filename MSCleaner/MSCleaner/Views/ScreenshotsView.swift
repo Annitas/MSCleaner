@@ -11,38 +11,62 @@ struct ScreenshotsView: View {
     @StateObject private var viewModel = ScreenshotsViewModel()
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                ForEach(viewModel.sortedDates, id: \.self) { date in
-                    if let groups = viewModel.groupedDuplicates[date] {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(formatDate(date))
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 16)
-                            
-                            ForEach(groups) { group in
-                                LazyVGrid(columns: [
-                                    GridItem(spacing: 16),
-                                    GridItem(spacing: 16)
-                                ], spacing: 8) {
-                                    ForEach(group.duplicates, id: \.id) { item in
-                                        Image(uiImage: item.image)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(width: 200, height: 200)
-                                            .clipped()
-                                            .cornerRadius(8)
-                                            .shadow(radius: 3)
+        VStack {
+            ScrollView {
+                LazyVStack(spacing: 20) {
+                    ForEach(viewModel.sortedDates, id: \.self) { date in
+                        if let groups = viewModel.groupedDuplicates[date] {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(formatDate(date))
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .padding(.horizontal, 16)
+                                
+                                ForEach(groups) { group in
+                                    LazyVGrid(columns: [
+                                        GridItem(spacing: 16),
+                                        GridItem(spacing: 16)
+                                    ], spacing: 8) {
+                                        ForEach(group.duplicates, id: \.id) { item in
+                                            ZStack(alignment: .bottomTrailing) {
+                                                Rectangle()
+                                                    .overlay(content: {
+                                                        Image(uiImage: item.image)
+                                                            .resizable()
+                                                            .aspectRatio(contentMode: .fill)
+                                                        
+                                                            .clipped()
+                                                        
+                                                    })
+                                                    .frame(width: 200, height: 200)
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        viewModel.toggleSelection(for: item)
+                                                    }
+                                                    .cornerRadius(8)
+                                                    .shadow(radius: 3)
+                                                
+                                                Circle()
+                                                    .strokeBorder(Color.white, lineWidth: 2)
+                                                    .background(Circle().fill(item.isSelected ? Color.blue : Color.white.opacity(0.7)))
+                                                    .frame(width: 24, height: 24)
+                                                    .padding(6)
+                                            }
+                                        }
                                     }
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 12)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.bottom, 12)
                             }
                         }
                     }
                 }
             }
+            
+            Button("Delete Selected") {
+                viewModel.deleteSelected()
+            }
+            .padding()
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.sortedDates.count)
     }
@@ -55,7 +79,6 @@ struct ScreenshotsView: View {
         return formatter.string(from: date)
     }
 }
-
 
 //#Preview {
 //    ScreenshotsView()
