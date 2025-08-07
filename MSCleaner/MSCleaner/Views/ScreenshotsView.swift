@@ -17,7 +17,7 @@ struct ScreenshotsView: View {
                     ForEach(viewModel.sortedDates, id: \.self) { date in
                         if let groups = viewModel.groupedDuplicates[date] {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(formatDate(date))
+                                Text("\(groups.flatMap { $0.duplicates }.count) items")
                                     .font(.headline)
                                     .fontWeight(.semibold)
                                     .padding(.horizontal, 16)
