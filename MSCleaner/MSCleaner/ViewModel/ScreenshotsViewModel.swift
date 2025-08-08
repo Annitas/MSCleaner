@@ -31,10 +31,6 @@ final class ScreenshotsViewModel: ObservableObject {
             .assign(to: &$sortedDates)
     }
     
-    func load() {
-        photoService.fetchScreenshots()
-    }
-    
     @MainActor
     private func updateGroupedDuplicates(date: Date, groups: [ScreenshotDuplicateGroup]) {
         groupedDuplicates[date] = groups
@@ -137,8 +133,6 @@ final class ScreenshotsViewModel: ObservableObject {
     @MainActor
     func deleteSelected() {
         var assetsToDelete: [PHAsset] = []
-        
-        // Собираем список удаляемых ассетов
         for groups in groupedDuplicates.values {
             for group in groups {
                 for item in group.duplicates where item.isSelected {

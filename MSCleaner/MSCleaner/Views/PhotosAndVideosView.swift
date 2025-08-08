@@ -9,6 +9,8 @@ import SwiftUI
 import CoreData
 
 struct PhotosAndVideosView: View {
+    @StateObject var viewModel = PhotosAndVideosViewModel()
+    
     let items = [
         ("Screenshots", "2.2 GB"),
         ("Screen recordings", "2.2 GB"),
@@ -42,14 +44,14 @@ struct PhotosAndVideosView: View {
         case "Screenshots":
             ScreenshotsView(
                 title: "Screenshots",
-                viewModel: ScreenshotsViewModel(photoService: PhotosService(albumType: .screenshots))
+                viewModel: viewModel.screenshotsVM
             )
             //        case "Screen recordings":
             //            ScreenRecordingsView()
         case "Similar photos":
             ScreenshotsView(
                 title: "Similar photos",
-                viewModel: ScreenshotsViewModel(photoService: PhotosService(albumType: .similarPhotos))
+                viewModel: viewModel.similarPhotosVM
             )
             //        case "Video duplicates":
             //            VideoDuplicatesView()
