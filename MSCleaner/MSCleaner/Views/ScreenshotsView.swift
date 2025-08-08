@@ -18,9 +18,18 @@ struct ScreenshotsView: View {
             .reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
         let totalSizeGB = Double(resources) / (1024 * 1024 * 1000)
 
-        VStack(alignment: .leading) {
-            Text("\(photos.count) photos (\(String(format: "%.2f", totalSizeGB)) GB)")
-                .padding(16)
+        VStack() {
+            HStack {
+                Text("\(photos.count) photos (\(String(format: "%.2f", totalSizeGB)) GB)")
+                    .padding(16)
+                Button(viewModel.selectedItemCount == 0 ? "Select all" : "Deselect all") {
+                    if viewModel.selectedItemCount == 0 {
+                        print("Select all tapped!")
+                    } else {
+                        print("Deselect all tapped!")
+                    }
+                }
+            }
             ScrollView {
                 LazyVStack(spacing: 20) {
                     ForEach(viewModel.sortedDates, id: \.self) { date in
@@ -54,6 +63,14 @@ struct ScreenshotsView: View {
                                                     }
                                                     .cornerRadius(8)
                                                     .shadow(radius: 3)
+                                                
+                                                if item.isBest {
+                                                    Image(systemName: "star.fill")
+                                                        .foregroundColor(.yellow)
+                                                        .shadow(radius: 2)
+                                                        .padding(6)
+                                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                                }
                                                 
                                                 ZStack {
                                                     Circle()

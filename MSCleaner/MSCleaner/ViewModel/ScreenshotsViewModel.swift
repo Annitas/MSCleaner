@@ -106,7 +106,9 @@ final class ScreenshotsViewModel: ObservableObject {
             }
             
             if group.count > 1 {
-                dateGroups.append(ScreenshotDuplicateGroup(duplicates: group))
+                var groupWithBest = group
+                groupWithBest[0].isBest = true
+                dateGroups.append(ScreenshotDuplicateGroup(duplicates: groupWithBest))
             }
         }
         

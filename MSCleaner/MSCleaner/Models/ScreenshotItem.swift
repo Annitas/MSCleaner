@@ -14,4 +14,5 @@ struct ScreenshotItem: Identifiable {
     let creationDate: Date
     let asset: PHAsset
     var isSelected: Bool = false
+    var isBest: Bool = false
 }
