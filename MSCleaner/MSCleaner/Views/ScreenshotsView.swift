@@ -97,14 +97,6 @@ struct ScreenshotsView: View {
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.sortedDates.count)
         .navigationTitle("Similar Photos")
     }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .full
-        formatter.timeStyle = .none
-        formatter.locale = Locale(identifier: "en_US")
-        return formatter.string(from: date)
-    }
 }
 
 //#Preview {

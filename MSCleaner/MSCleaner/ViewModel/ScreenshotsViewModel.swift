@@ -59,8 +59,8 @@ final class ScreenshotsViewModel: ObservableObject {
                 let dateKey = self.calendar.startOfDay(for: creationDate)
                 
                 group.enter()
-                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { [weak self] image, _ in
-                    guard let self = self, let image = image else {
+                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { image, _ in
+                    guard let image else {
                         group.leave()
                         return
                     }
@@ -73,7 +73,8 @@ final class ScreenshotsViewModel: ObservableObject {
                 }
             }
             
-            group.notify(queue: .main) {
+            group.notify(queue: .main) { [weak self] in
+                guard let self = self else { return }
                 self.processDuplicatesAsync(from: groupedByDate)
             }
         }
@@ -205,7 +206,7 @@ final class ScreenshotsViewModel: ObservableObject {
     
     private func getAssetFileSize(for asset: PHAsset) -> Int64 {
         let resources = PHAssetResource.assetResources(for: asset)
-        if let imageResource = resources.first(where: { $0.type == .photo }) {
+        if resources.first(where: { $0.type == .photo }) != nil {
             let requestOptions = PHImageRequestOptions()
             requestOptions.isSynchronous = true
             requestOptions.deliveryMode = .fastFormat
@@ -247,7 +248,7 @@ final class ScreenshotsViewModel: ObservableObject {
                     self?.resetSelection()
                     self?.fetchScreenshots()
                 } else if let error = error {
-                    print("!!! Error deleteSelected")
+                    print("!!! Error deleteSelected \(error)")
                 }
             }
         }
