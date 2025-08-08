@@ -63,11 +63,22 @@ struct ScreenshotsView: View {
                                                     .shadow(radius: 3)
                                                 
                                                 if item.isBest {
-                                                    Image(systemName: "star.fill")
-                                                        .foregroundColor(.yellow)
-                                                        .shadow(radius: 2)
+                                                    ZStack {
+                                                        HStack {
+                                                            Image(systemName: "star.fill")
+                                                                .foregroundColor(.blue)
+                                                                .shadow(radius: 2)
+                                                            
+                                                            Text("Best")
+                                                                .fontWeight(.medium)
+                                                                .foregroundStyle(.blue)
+                                                        }
                                                         .padding(6)
-                                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                                        .background(.white.opacity(0.8))
+                                                        .cornerRadius(6)
+                                                    }
+                                                    .padding(8)
+                                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                                 }
                                                 
                                                 ZStack {
