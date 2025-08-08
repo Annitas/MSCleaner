@@ -9,7 +9,8 @@ import SwiftUI
 import Photos
 
 struct ScreenshotsView: View {
-    @StateObject private var viewModel = ScreenshotsViewModel()
+    @State var title: String
+    @StateObject var viewModel: ScreenshotsViewModel
     
     var body: some View {
         let photos = viewModel.groupedDuplicates.values.flatMap { $0.flatMap { $0.duplicates } }
@@ -121,7 +122,7 @@ struct ScreenshotsView: View {
             .padding(.horizontal)
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.sortedDates.count)
-        .navigationTitle("Similar Photos")
+        .navigationTitle(title)
     }
 }
 

@@ -17,9 +17,11 @@ final class ScreenshotsViewModel: ObservableObject {
     
     private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
     private var cancellables = Set<AnyCancellable>()
-    let photoService = PhotosService()
+    let photoService: PhotosService
     
-    init() {
+    init(photoService: PhotosService) {
+        self.photoService = photoService
+        
         photoService.$groupedDuplicates
             .receive(on: DispatchQueue.main)
             .assign(to: &$groupedDuplicates)

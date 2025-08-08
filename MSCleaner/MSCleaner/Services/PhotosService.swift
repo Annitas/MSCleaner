@@ -9,19 +9,28 @@ import Photos
 import Vision
 import SwiftUI
 
+enum MediaAlbumType {
+    case screenshots
+    case similarPhotos
+    case screenRecordings
+    case videoDuplicates
+}
+
 final class PhotosService {
     @Published var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
     @Published var sortedDates: [Date] = []
     
+    private let albumType: MediaAlbumType
     private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     private let processingQueue = OperationQueue()
     private let calendar = Calendar.current
     private let imageManager = PHCachingImageManager()
     
-    init() {
+    init(albumType: MediaAlbumType) {
+        self.albumType = albumType
         processingQueue.maxConcurrentOperationCount = 4
-        fetchScreenshots()
+        fetchScreenshots() // TODO: Rename to main photos
     }
     
     func fetchScreenshots() {
@@ -36,12 +45,39 @@ final class PhotosService {
     private func loadAssets() {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        let collection: PHAssetCollection?
+        switch albumType {
+        case .screenshots:
+            collection = PHAssetCollection.fetchAssetCollections(
+                with: .smartAlbum,
+                subtype: .smartAlbumScreenshots,
+                options: nil
+            ).firstObject
+            
+        case .similarPhotos:
+            collection = PHAssetCollection.fetchAssetCollections(
+                with: .smartAlbum,
+                subtype: .smartAlbumUserLibrary,
+                options: nil
+            ).firstObject
+            
+        case .screenRecordings:
+            collection = PHAssetCollection.fetchAssetCollections(
+                with: .smartAlbum,
+                subtype: .smartAlbumVideos, // TODO: find screen recordings
+                options: nil
+            ).firstObject
+            
+        case .videoDuplicates:
+            collection = PHAssetCollection.fetchAssetCollections(
+                with: .smartAlbum,
+                subtype: .smartAlbumVideos,
+                options: nil
+            ).firstObject
+        }
         
-        let screenshotsAlbum = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumScreenshots, options: nil)
-        
-        guard let collection = screenshotsAlbum.firstObject else { return }
+        guard let collection else { return }
         let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
-        
         let requestOptions = PHImageRequestOptions()
         requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isSynchronous = false

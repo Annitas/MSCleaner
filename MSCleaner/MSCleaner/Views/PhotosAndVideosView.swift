@@ -40,13 +40,19 @@ struct PhotosAndVideosView: View {
     func destinationView(for itemName: String) -> some View {
         switch itemName {
         case "Screenshots":
-            ScreenshotsView()
-//        case "Screen recordings":
-//            ScreenRecordingsView()
-//        case "Similar photos":
-//            SimilarPhotosView()
-//        case "Video duplicates":
-//            VideoDuplicatesView()
+            ScreenshotsView(
+                title: "Screenshots",
+                viewModel: ScreenshotsViewModel(photoService: PhotosService(albumType: .screenshots))
+            )
+            //        case "Screen recordings":
+            //            ScreenRecordingsView()
+        case "Similar photos":
+            ScreenshotsView(
+                title: "Similar photos",
+                viewModel: ScreenshotsViewModel(photoService: PhotosService(albumType: .similarPhotos))
+            )
+            //        case "Video duplicates":
+            //            VideoDuplicatesView()
         default:
             Text("Unknown item")
         }
