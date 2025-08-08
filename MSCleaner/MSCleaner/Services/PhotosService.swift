@@ -55,6 +55,10 @@ final class PhotosService {
             ).firstObject
             
         case .similarPhotos:
+            fetchOptions.predicate = NSPredicate(
+                format: "mediaSubtype != %d",
+                PHAssetMediaSubtype.photoScreenshot.rawValue
+            )
             collection = PHAssetCollection.fetchAssetCollections(
                 with: .smartAlbum,
                 subtype: .smartAlbumUserLibrary,
@@ -100,7 +104,9 @@ final class PhotosService {
                     
                     let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
                     lock.lock()
+                    print("!!! start append")
                     groupedByDate[dateKey, default: []].append(item)
+                    print("!!! end append")
                     lock.unlock()
                     group.leave()
                 }
@@ -154,13 +160,18 @@ final class PhotosService {
     
     @MainActor
     private func updateGroupedDuplicates(date: Date, groups: [ScreenshotDuplicateGroup]) {
+        print("!!! start groupedDuplicates[date] = groups")
         groupedDuplicates[date] = groups
+        print("!!! end groupedDuplicates[date] = groups")
         sortedDatesQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
             DispatchQueue.main.async {
                 if !self.sortedDates.contains(date) {
+                    print("!!! start self.sortedDates.append(date)")
                     self.sortedDates.append(date)
+                    print("!!! end self.sortedDates.append(date)")
                     self.sortedDates.sort(by: >)
+                    print("!!! end self.sortedDates.sort(by: >)")
                 }
             }
         }
