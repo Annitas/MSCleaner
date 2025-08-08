@@ -170,6 +170,32 @@ final class ScreenshotsViewModel: ObservableObject {
     }
     
     @MainActor
+    func toggleSelectAll() {
+        let shouldSelectAll = selectedItemCount == 0
+        
+        selectedItemCount = 0
+        deletedDataAmount = 0
+        
+        for (date, groups) in groupedDuplicates {
+            for (groupIndex, group) in groups.enumerated() {
+                for (itemIndex, var item) in group.duplicates.enumerated() {
+                    if item.isBest {
+                        groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected = false
+                        continue
+                    }
+                    groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected = shouldSelectAll
+                    if shouldSelectAll {
+                        selectedItemCount += 1
+                        deletedDataAmount += getAssetFileSize(for: item.asset)
+                    }
+                }
+            }
+        }
+        
+        objectWillChange.send()
+    }
+    
+    @MainActor
     func toggleSelection(for item: ScreenshotItem) {
         guard let (date, groupIndex, itemIndex) = findItemIndices(for: item) else { return }
         guard let groups = groupedDuplicates[date], groupIndex < groups.count, itemIndex < groups[groupIndex].duplicates.count else {
