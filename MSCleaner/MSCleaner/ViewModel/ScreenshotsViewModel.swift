@@ -7,116 +7,30 @@
 
 import SwiftUI
 import Photos
-import Vision
+import Combine
 
 final class ScreenshotsViewModel: ObservableObject {
-    @Published var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
-    @Published var sortedDates: [Date] = []
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
+    @Published private(set) var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
+    @Published private(set) var sortedDates: [Date] = []
     
-    private let calendar = Calendar.current
-    private let imageManager = PHCachingImageManager()
-    private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
-    
-    private let processingQueue = OperationQueue()
     private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
+    private var cancellables = Set<AnyCancellable>()
+    let photoService = PhotosService()
     
     init() {
-        processingQueue.maxConcurrentOperationCount = 4
-        fetchScreenshots()
+        photoService.$groupedDuplicates
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$groupedDuplicates)
+        
+        photoService.$sortedDates
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$sortedDates)
     }
     
-    func fetchScreenshots() {
-        PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
-            DispatchQueue.main.async {
-                guard status == .authorized || status == .limited else { return }
-                self.loadAssets()
-            }
-        }
-    }
-    
-    private func loadAssets() {
-        let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        
-        let screenshotsAlbum = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumScreenshots, options: nil)
-        
-        guard let collection = screenshotsAlbum.firstObject else { return }
-        let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
-        
-        let requestOptions = PHImageRequestOptions()
-        requestOptions.deliveryMode = .highQualityFormat
-        requestOptions.isSynchronous = false
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            var groupedByDate: [Date: [ScreenshotItem]] = [:]
-            let group = DispatchGroup()
-            let lock = NSLock()
-            
-            assets.enumerateObjects { [weak self] asset, _, _ in
-                guard let self = self, let creationDate = asset.creationDate else { return }
-                let dateKey = self.calendar.startOfDay(for: creationDate)
-                
-                group.enter()
-                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { image, _ in
-                    guard let image else {
-                        group.leave()
-                        return
-                    }
-                    
-                    let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
-                    lock.lock()
-                    groupedByDate[dateKey, default: []].append(item)
-                    lock.unlock()
-                    group.leave()
-                }
-            }
-            
-            group.notify(queue: .main) { [weak self] in
-                guard let self = self else { return }
-                self.processDuplicatesAsync(from: groupedByDate)
-            }
-        }
-    }
-    
-    func processDuplicatesAsync(from grouped: [Date: [ScreenshotItem]]) {
-        for (date, items) in grouped {
-            processingQueue.addOperation { [weak self] in
-                self?.processDuplicates(for: date, items: items)
-            }
-        }
-    }
-    
-    private func processDuplicates(for date: Date, items: [ScreenshotItem]) {
-        var visited = Set<Int>()
-        var dateGroups: [ScreenshotDuplicateGroup] = []
-        
-        for i in 0..<items.count {
-            guard !visited.contains(i) else { continue }
-            var group = [items[i]]
-            visited.insert(i)
-            
-            for j in (i + 1)..<items.count {
-                guard !visited.contains(j) else { continue }
-                if isSimilarPhotos(firstItem: items[i], secondItem: items[j]) {
-                    group.append(items[j])
-                    visited.insert(j)
-                }
-            }
-            
-            if group.count > 1 {
-                var groupWithBest = group
-                groupWithBest[0].isBest = true
-                dateGroups.append(ScreenshotDuplicateGroup(duplicates: groupWithBest))
-            }
-        }
-        
-        if !dateGroups.isEmpty {
-            Task { @MainActor in
-                self.updateGroupedDuplicates(date: date, groups: dateGroups)
-            }
-        }
+    func load() {
+        photoService.fetchScreenshots()
     }
     
     @MainActor
@@ -131,42 +45,6 @@ final class ScreenshotsViewModel: ObservableObject {
                 }
             }
         }
-    }
-    
-    private func isSimilarPhotos(firstItem: ScreenshotItem, secondItem: ScreenshotItem) -> Bool {
-        var distance: Float = 0
-        do {
-            if let fp1 = featurePrintForImage(image: firstItem.image, cacheKey: firstItem.asset.localIdentifier),
-               let fp2 = featurePrintForImage(image: secondItem.image, cacheKey: secondItem.asset.localIdentifier) {
-                try fp1.computeDistance(&distance, to: fp2)
-            }
-        } catch {
-            print("!!! Error isSimilarPhotos")
-            return false
-        }
-        return distance <= 0.3
-    }
-    
-    private func featurePrintForImage(image: UIImage, cacheKey: String) -> VNFeaturePrintObservation? {
-        if let cached = Self.sharedFeatureCache.object(forKey: cacheKey as NSString) {
-            return cached
-        }
-        
-        guard let cgImage = image.cgImage else { return nil }
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        let request = VNGenerateImageFeaturePrintRequest()
-        
-        do {
-            try handler.perform([request])
-            if let result = request.results?.first as? VNFeaturePrintObservation {
-                Self.sharedFeatureCache.setObject(result, forKey: cacheKey as NSString)
-                return result
-            }
-        } catch {
-            print("!!! Error featurePrintForImage: \(error)")
-        }
-        
-        return nil
     }
     
     @MainActor
@@ -258,6 +136,7 @@ final class ScreenshotsViewModel: ObservableObject {
     func deleteSelected() {
         var assetsToDelete: [PHAsset] = []
         
+        // Собираем список удаляемых ассетов
         for groups in groupedDuplicates.values {
             for group in groups {
                 for item in group.duplicates where item.isSelected {
@@ -272,14 +151,39 @@ final class ScreenshotsViewModel: ObservableObject {
             PHAssetChangeRequest.deleteAssets(assetsToDelete as NSArray)
         }) { [weak self] success, error in
             DispatchQueue.main.async {
+                guard let self = self else { return }
+                
                 if success {
-                    self?.resetSelection()
-                    self?.fetchScreenshots()
+                    self.removeDeletedItems(assetsToDelete)
+                    self.resetSelection()
                 } else if let error = error {
                     print("!!! Error deleteSelected \(error)")
                 }
             }
         }
+    }
+    
+    @MainActor
+    private func removeDeletedItems(_ deletedAssets: [PHAsset]) {
+        var newGrouped: [Date: [ScreenshotDuplicateGroup]] = [:]
+        
+        for (date, groups) in groupedDuplicates {
+            var filteredGroups: [ScreenshotDuplicateGroup] = []
+            
+            for var group in groups {
+                group.duplicates.removeAll { deletedAssets.contains($0.asset) }
+                if !group.duplicates.isEmpty {
+                    filteredGroups.append(group)
+                }
+            }
+            
+            if !filteredGroups.isEmpty {
+                newGrouped[date] = filteredGroups
+            }
+        }
+        
+        groupedDuplicates = newGrouped
+        sortedDates = sortedDates.filter { newGrouped.keys.contains($0) }
     }
     
     @MainActor
