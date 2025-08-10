@@ -12,8 +12,7 @@ import Combine
 final class ScreenshotsViewModel: ObservableObject {
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
-    @Published private(set) var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
-    @Published private(set) var sortedDates: [Date] = []
+    @Published private(set) var groupedDuplicates: [[ScreenshotItem]] = []
     
     private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
     private var cancellables = Set<AnyCancellable>()
@@ -25,26 +24,8 @@ final class ScreenshotsViewModel: ObservableObject {
         photoService.$groupedDuplicates
             .receive(on: DispatchQueue.main)
             .assign(to: &$groupedDuplicates)
-        
-        photoService.$sortedDates
-            .receive(on: DispatchQueue.main)
-            .assign(to: &$sortedDates)
     }
-    
-    @MainActor
-    private func updateGroupedDuplicates(date: Date, groups: [ScreenshotDuplicateGroup]) {
-        groupedDuplicates[date] = groups
-        sortedDatesQueue.async(flags: .barrier) { [weak self] in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                if !self.sortedDates.contains(date) {
-                    self.sortedDates.append(date)
-                    self.sortedDates.sort(by: >)
-                }
-            }
-        }
-    }
-    
+
     @MainActor
     func toggleSelectAll() {
         let shouldSelectAll = selectedItemCount == 0
@@ -52,18 +33,19 @@ final class ScreenshotsViewModel: ObservableObject {
         selectedItemCount = 0
         deletedDataAmount = 0
         
-        for (date, groups) in groupedDuplicates {
-            for (groupIndex, group) in groups.enumerated() {
-                for (itemIndex, var item) in group.duplicates.enumerated() {
-                    if item.isBest {
-                        groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected = false
-                        continue
-                    }
-                    groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected = shouldSelectAll
-                    if shouldSelectAll {
-                        selectedItemCount += 1
-                        deletedDataAmount += getAssetFileSize(for: item.asset)
-                    }
+        for groupIndex in groupedDuplicates.indices {
+            for itemIndex in groupedDuplicates[groupIndex].indices {
+                let item = groupedDuplicates[groupIndex][itemIndex]
+                
+                if item.isBest {
+                    groupedDuplicates[groupIndex][itemIndex].isSelected = false
+                    continue
+                }
+                
+                groupedDuplicates[groupIndex][itemIndex].isSelected = shouldSelectAll
+                if shouldSelectAll {
+                    selectedItemCount += 1
+                    deletedDataAmount += getAssetFileSize(for: item.asset)
                 }
             }
         }
@@ -73,15 +55,14 @@ final class ScreenshotsViewModel: ObservableObject {
     
     @MainActor
     func toggleSelection(for item: ScreenshotItem) {
-        guard let (date, groupIndex, itemIndex) = findItemIndices(for: item) else { return }
-        guard let groups = groupedDuplicates[date], groupIndex < groups.count, itemIndex < groups[groupIndex].duplicates.count else {
-            print("!!! Error toggleSelection")
+        guard let (groupIndex, itemIndex) = findItemIndices(for: item) else {
+            print("!!! Error toggleSelection: item not found")
             return
         }
         
-        groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected.toggle()
+        groupedDuplicates[groupIndex][itemIndex].isSelected.toggle()
         
-        let isSelected = groupedDuplicates[date]![groupIndex].duplicates[itemIndex].isSelected
+        let isSelected = groupedDuplicates[groupIndex][itemIndex].isSelected
         let photoDataSize = getAssetFileSize(for: item.asset)
         
         if isSelected {
@@ -95,13 +76,11 @@ final class ScreenshotsViewModel: ObservableObject {
         objectWillChange.send()
     }
     
-    private func findItemIndices(for item: ScreenshotItem) -> (Date, Int, Int)? {
-        for (date, groups) in groupedDuplicates {
-            for (groupIndex, group) in groups.enumerated() {
-                for (itemIndex, duplicate) in group.duplicates.enumerated() {
-                    if duplicate.id == item.id {
-                        return (date, groupIndex, itemIndex)
-                    }
+    private func findItemIndices(for item: ScreenshotItem) -> (Int, Int)? {
+        for (groupIndex, group) in groupedDuplicates.enumerated() {
+            for (itemIndex, duplicate) in group.enumerated() {
+                if duplicate.id == item.id {
+                    return (groupIndex, itemIndex)
                 }
             }
         }
@@ -133,11 +112,9 @@ final class ScreenshotsViewModel: ObservableObject {
     @MainActor
     func deleteSelected() {
         var assetsToDelete: [PHAsset] = []
-        for groups in groupedDuplicates.values {
-            for group in groups {
-                for item in group.duplicates where item.isSelected {
-                    assetsToDelete.append(item.asset)
-                }
+        for group in groupedDuplicates {
+            for item in group where item.isSelected {
+                assetsToDelete.append(item.asset)
             }
         }
         
@@ -161,25 +138,16 @@ final class ScreenshotsViewModel: ObservableObject {
     
     @MainActor
     private func removeDeletedItems(_ deletedAssets: [PHAsset]) {
-        var newGrouped: [Date: [ScreenshotDuplicateGroup]] = [:]
+        var filteredGroups: [[ScreenshotItem]] = []
         
-        for (date, groups) in groupedDuplicates {
-            var filteredGroups: [ScreenshotDuplicateGroup] = []
-            
-            for var group in groups {
-                group.duplicates.removeAll { deletedAssets.contains($0.asset) }
-                if !group.duplicates.isEmpty {
-                    filteredGroups.append(group)
-                }
-            }
-            
-            if !filteredGroups.isEmpty {
-                newGrouped[date] = filteredGroups
+        for group in groupedDuplicates {
+            let filteredGroup = group.filter { !deletedAssets.contains($0.asset) }
+            if !filteredGroup.isEmpty {
+                filteredGroups.append(filteredGroup)
             }
         }
         
-        groupedDuplicates = newGrouped
-        sortedDates = sortedDates.filter { newGrouped.keys.contains($0) }
+        groupedDuplicates = filteredGroups
     }
     
     @MainActor

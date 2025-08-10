@@ -13,12 +13,12 @@ struct ScreenshotsView: View {
     @StateObject var viewModel: ScreenshotsViewModel
     
     var body: some View {
-        let photos = viewModel.groupedDuplicates.values.flatMap { $0.flatMap { $0.duplicates } }
+        let photos = viewModel.groupedDuplicates.flatMap { $0 }
         let resources = photos.flatMap { PHAssetResource.assetResources(for: $0.asset) }
             .filter { $0.type == .photo }
             .reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
         let totalSizeGB = Double(resources) / (1024 * 1024 * 1000)
-
+        
         VStack {
             HStack {
                 Text("\(photos.count) photos (\(String(format: "%.2f", totalSizeGB)) GB)")
@@ -31,81 +31,81 @@ struct ScreenshotsView: View {
             
             ScrollView {
                 LazyVStack(spacing: 20) {
-                    ForEach(viewModel.sortedDates, id: \.self) { date in
-                        if let groups = viewModel.groupedDuplicates[date] {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("\(groups.flatMap { $0.duplicates }.count) items")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                    .padding(.horizontal, 16)
-                                
-                                ForEach(groups) { group in
-                                    LazyVGrid(columns: [
-                                        GridItem(spacing: 16),
-                                        GridItem(spacing: 16)
-                                    ], spacing: 8) {
-                                        ForEach(group.duplicates, id: \.id) { item in
-                                            ZStack(alignment: .bottomTrailing) {
-                                                Rectangle()
-                                                    .overlay(content: {
-                                                        Image(uiImage: item.image)
-                                                            .resizable()
-                                                            .aspectRatio(contentMode: .fill)
-                                                        
-                                                            .clipped()
-                                                        
-                                                    })
-                                                    .frame(width: 200, height: 200)
-                                                    .contentShape(Rectangle())
-                                                    .onTapGesture {
-                                                        viewModel.toggleSelection(for: item)
-                                                    }
-                                                    .cornerRadius(8)
-                                                    .shadow(radius: 3)
+                    ForEach(Array(viewModel.groupedDuplicates.enumerated()), id: \.offset) { groupIndex, group in
+                        //                        if let groups = viewModel.groupedDuplicates[date] {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("\(group.count) items")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 16)
+                            
+                            //                                ForEach(groups) { group in
+                            LazyVGrid(columns: [
+                                GridItem(spacing: 16),
+                                GridItem(spacing: 16)
+                            ], spacing: 8) {
+                                ForEach(group, id: \.id) { item in
+                                    ZStack(alignment: .bottomTrailing) {
+                                        Rectangle()
+                                            .overlay(content: {
+                                                Image(uiImage: item.image)
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fill)
                                                 
-                                                if item.isBest {
-                                                    ZStack {
-                                                        HStack {
-                                                            Image(systemName: "star.fill")
-                                                                .foregroundColor(.blue)
-                                                                .shadow(radius: 2)
-                                                            
-                                                            Text("Best")
-                                                                .fontWeight(.medium)
-                                                                .foregroundStyle(.blue)
-                                                        }
-                                                        .padding(6)
-                                                        .background(.white.opacity(0.8))
-                                                        .cornerRadius(6)
-                                                    }
-                                                    .padding(8)
-                                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                                                }
+                                                    .clipped()
                                                 
-                                                ZStack {
-                                                    Circle()
-                                                        .fill(item.isSelected ? Color.blue : Color.white.opacity(0.7))
-                                                        .frame(width: 24, height: 24)
-                                                        .overlay(
-                                                            Circle().stroke(Color.white, lineWidth: 2)
-                                                        )
+                                            })
+                                            .frame(width: 200, height: 200)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                viewModel.toggleSelection(for: item)
+                                            }
+                                            .cornerRadius(8)
+                                            .shadow(radius: 3)
+                                        
+                                        if item.isBest {
+                                            ZStack {
+                                                HStack {
+                                                    Image(systemName: "star.fill")
+                                                        .foregroundColor(.blue)
+                                                        .shadow(radius: 2)
                                                     
-                                                    if item.isSelected {
-                                                        Image(systemName: "checkmark")
-                                                            .foregroundColor(.white)
-                                                            .font(.system(size: 12, weight: .bold))
-                                                    }
+                                                    Text("Best")
+                                                        .fontWeight(.medium)
+                                                        .foregroundStyle(.blue)
                                                 }
-                                                .shadow(radius: 3)
                                                 .padding(6)
+                                                .background(.white.opacity(0.8))
+                                                .cornerRadius(6)
+                                            }
+                                            .padding(8)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                        }
+                                        
+                                        ZStack {
+                                            Circle()
+                                                .fill(item.isSelected ? Color.blue : Color.white.opacity(0.7))
+                                                .frame(width: 24, height: 24)
+                                                .overlay(
+                                                    Circle().stroke(Color.white, lineWidth: 2)
+                                                )
+                                            
+                                            if item.isSelected {
+                                                Image(systemName: "checkmark")
+                                                    .foregroundColor(.white)
+                                                    .font(.system(size: 12, weight: .bold))
                                             }
                                         }
+                                        .shadow(radius: 3)
+                                        .padding(6)
                                     }
-                                    .padding(.horizontal, 16)
-                                    .padding(.bottom, 12)
                                 }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
                         }
+                        //                            }
+                        //                        }
                     }
                 }
             }
@@ -121,7 +121,7 @@ struct ScreenshotsView: View {
             }
             .padding(.horizontal)
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.sortedDates.count)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.groupedDuplicates.count)
         .navigationTitle(title)
     }
 }

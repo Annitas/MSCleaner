@@ -17,11 +17,9 @@ enum MediaAlbumType {
 }
 
 final class PhotosService {
-    @Published var groupedDuplicates: [Date: [ScreenshotDuplicateGroup]] = [:]
-    @Published var sortedDates: [Date] = []
+    @Published var groupedDuplicates: [[ScreenshotItem]] = []
     
     private let albumType: MediaAlbumType
-    private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     private let processingQueue = OperationQueue()
     private let calendar = Calendar.current
@@ -29,16 +27,14 @@ final class PhotosService {
     
     init(albumType: MediaAlbumType) {
         self.albumType = albumType
-        processingQueue.maxConcurrentOperationCount = 4
+        processingQueue.maxConcurrentOperationCount = 2
         fetchScreenshots() // TODO: Rename to main photos
     }
     
     func fetchScreenshots() {
         PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
-            DispatchQueue.main.async {
-                guard status == .authorized || status == .limited else { return }
-                self.loadAssets()
-            }
+            guard status == .authorized || status == .limited else { return }
+            self.loadAssets()
         }
     }
     
@@ -85,37 +81,32 @@ final class PhotosService {
         let requestOptions = PHImageRequestOptions()
         requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isSynchronous = false
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            var groupedByDate: [Date: [ScreenshotItem]] = [:]
-            let group = DispatchGroup()
-            let lock = NSLock()
-            
-            assets.enumerateObjects { [weak self] asset, _, _ in
-                guard let self = self, let creationDate = asset.creationDate else { return }
-                let dateKey = self.calendar.startOfDay(for: creationDate)
-                
-                group.enter()
-                self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300), contentMode: .aspectFill, options: requestOptions) { image, _ in
-                    guard let image else {
-                        group.leave()
-                        return
-                    }
-                    
-                    let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
-                    lock.lock()
-                    print("!!! start append")
-                    groupedByDate[dateKey, default: []].append(item)
-                    print("!!! end append")
-                    lock.unlock()
-                    group.leave()
+        var groupedByDate: [Date: [ScreenshotItem]] = [:]
+        let requestImagesGroup = DispatchGroup()
+        let requestImagesSemaphore = DispatchSemaphore(value: 4)
+        assets.enumerateObjects { [weak self] asset, _, _  in
+            guard let self = self, let creationDate = asset.creationDate else { return }
+            let dateKey = self.calendar.startOfDay(for: creationDate)
+            requestImagesGroup.enter()
+            requestImagesSemaphore.wait()
+            self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300),
+                                           contentMode: .aspectFill,
+                                           options: requestOptions) { image, _ in
+                defer {
+                    requestImagesSemaphore.signal()
+                    requestImagesGroup.leave()
                 }
+                guard let image else { return }
+                let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
+                groupedByDate[dateKey, default: []].append(item)
+                print("image \(image) date: \(creationDate)")
             }
-            
-            group.notify(queue: .main) { [weak self] in
-                guard let self = self else { return }
-                self.processDuplicatesAsync(from: groupedByDate)
-            }
+        }
+        
+        requestImagesGroup.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            self.processDuplicatesAsync(from: groupedByDate)
+            print("COMPLETED")
         }
     }
     
@@ -129,8 +120,6 @@ final class PhotosService {
     
     private func processDuplicates(for date: Date, items: [ScreenshotItem]) {
         var visited = Set<Int>()
-        var dateGroups: [ScreenshotDuplicateGroup] = []
-        
         for i in 0..<items.count {
             guard !visited.contains(i) else { continue }
             var group = [items[i]]
@@ -147,32 +136,7 @@ final class PhotosService {
             if group.count > 1 {
                 var groupWithBest = group
                 groupWithBest[0].isBest = true
-                dateGroups.append(ScreenshotDuplicateGroup(duplicates: groupWithBest))
-            }
-        }
-        
-        if !dateGroups.isEmpty {
-            Task { @MainActor in
-                self.updateGroupedDuplicates(date: date, groups: dateGroups)
-            }
-        }
-    }
-    
-    @MainActor
-    private func updateGroupedDuplicates(date: Date, groups: [ScreenshotDuplicateGroup]) {
-        print("!!! start groupedDuplicates[date] = groups")
-        groupedDuplicates[date] = groups
-        print("!!! end groupedDuplicates[date] = groups")
-        sortedDatesQueue.async(flags: .barrier) { [weak self] in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                if !self.sortedDates.contains(date) {
-                    print("!!! start self.sortedDates.append(date)")
-                    self.sortedDates.append(date)
-                    print("!!! end self.sortedDates.append(date)")
-                    self.sortedDates.sort(by: >)
-                    print("!!! end self.sortedDates.sort(by: >)")
-                }
+                groupedDuplicates.append(groupWithBest)
             }
         }
     }
