@@ -32,14 +32,11 @@ struct ScreenshotsView: View {
             ScrollView {
                 LazyVStack(spacing: 20) {
                     ForEach(Array(viewModel.groupedDuplicates.enumerated()), id: \.offset) { groupIndex, group in
-                        //                        if let groups = viewModel.groupedDuplicates[date] {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("\(group.count) items")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                                 .padding(.horizontal, 16)
-                            
-                            //                                ForEach(groups) { group in
                             LazyVGrid(columns: [
                                 GridItem(spacing: 16),
                                 GridItem(spacing: 16)
@@ -104,8 +101,6 @@ struct ScreenshotsView: View {
                             .padding(.horizontal, 16)
                             .padding(.bottom, 12)
                         }
-                        //                            }
-                        //                        }
                     }
                 }
             }

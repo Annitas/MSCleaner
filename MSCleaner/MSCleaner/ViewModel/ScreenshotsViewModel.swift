@@ -13,8 +13,11 @@ final class ScreenshotsViewModel: ObservableObject {
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
     @Published private(set) var groupedDuplicates: [[ScreenshotItem]] = []
+    @Published var dataAmount: Int64 = 0
     
     private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
+    private let dataSizeQueue = DispatchQueue(label: "data.size.calculation", attributes: .concurrent)
+    private let updateQueue = DispatchQueue(label: "data.updates", attributes: .concurrent)
     private var cancellables = Set<AnyCancellable>()
     let photoService: PhotosService
     
@@ -24,8 +27,16 @@ final class ScreenshotsViewModel: ObservableObject {
         photoService.$groupedDuplicates
             .receive(on: DispatchQueue.main)
             .assign(to: &$groupedDuplicates)
+        
+        $groupedDuplicates
+            .dropFirst()
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.calculateDataAmount()
+            }
+            .store(in: &cancellables)
     }
-
+    
     @MainActor
     func toggleSelectAll() {
         let shouldSelectAll = selectedItemCount == 0
@@ -85,6 +96,35 @@ final class ScreenshotsViewModel: ObservableObject {
             }
         }
         return nil
+    }
+    
+    func calculateDataAmount() {
+        guard !groupedDuplicates.isEmpty else {
+            updateDataAmount(0)
+            return
+        }
+        
+        dataSizeQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            var totalSize: Int64 = 0
+            
+            for group in self.groupedDuplicates {
+                for item in group {
+                    totalSize += self.getAssetFileSize(for: item.asset)
+                }
+            }
+            
+            self.updateDataAmount(totalSize)
+        }
+    }
+    
+    private func updateDataAmount(_ newValue: Int64) {
+        updateQueue.async(flags: .barrier) { [weak self] in
+            DispatchQueue.main.async {
+                self?.dataAmount = newValue
+            }
+        }
     }
     
     private func getAssetFileSize(for asset: PHAsset) -> Int64 {

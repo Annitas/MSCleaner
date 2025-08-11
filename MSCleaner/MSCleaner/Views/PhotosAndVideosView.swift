@@ -11,27 +11,44 @@ import CoreData
 struct PhotosAndVideosView: View {
     @StateObject var viewModel = PhotosAndVideosViewModel()
     
-    let items = [
-        ("Screenshots", "2.2 GB"),
-        ("Screen recordings", "2.2 GB"),
-        ("Similar photos", "2.2 GB"),
-        ("Video duplicates", "2.2 GB"),
-    ]
+    private var items: [PhotosVideoItem] {
+        [
+            PhotosVideoItem(
+                title: "Screenshots",
+                size: viewModel.formattedScreenshotsDataSize
+            ),
+            PhotosVideoItem(
+                title: "Screen recordings",
+                size: "2.2 GB" // TODO: Заменить на динамическое значение
+            ),
+            PhotosVideoItem(
+                title: "Similar photos",
+                size: viewModel.formattedSimilarPhotosDataSize
+            ),
+            PhotosVideoItem(
+                title: "Video duplicates",
+                size: "2.2 GB" // TODO: Заменить на динамическое значение
+            ),
+        ]
+    }
+    
     var body: some View {
         NavigationView {
-            List(items, id: \.0) { item in
-                NavigationLink(destination: destinationView(for: item.0)) {
-                    HStack {
-                        Text(item.0)
-                            .font(.body)
-                        
-                        Spacer()
-                        
-                        Text(item.1)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+            List {
+                ForEach(items, id: \.title) { item in
+                    NavigationLink(destination: destinationView(for: item.title)) {
+                        HStack {
+                            Text(item.title)
+                                .font(.body)
+                            
+                            Spacer()
+                            
+                            Text(item.size)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
                 }
             }
             .navigationTitle("Photos & videos")

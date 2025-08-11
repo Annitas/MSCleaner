@@ -18,7 +18,9 @@ enum MediaAlbumType {
 
 final class PhotosService {
     @Published var groupedDuplicates: [[ScreenshotItem]] = []
+    @Published var assetSizes: Int64 = 0
     
+    private let assetSizesLock = NSLock()
     private let albumType: MediaAlbumType
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     private let processingQueue = OperationQueue()
@@ -99,7 +101,6 @@ final class PhotosService {
                 guard let image else { return }
                 let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
                 groupedByDate[dateKey, default: []].append(item)
-                print("image \(image) date: \(creationDate)")
             }
         }
         
@@ -112,9 +113,10 @@ final class PhotosService {
     
     func processDuplicatesAsync(from grouped: [Date: [ScreenshotItem]]) {
         for (date, items) in grouped {
-            processingQueue.addOperation { [weak self] in
+            let operation = BlockOperation { [weak self] in
                 self?.processDuplicates(for: date, items: items)
             }
+            processingQueue.addOperation(operation)
         }
     }
     
@@ -136,7 +138,31 @@ final class PhotosService {
             if group.count > 1 {
                 var groupWithBest = group
                 groupWithBest[0].isBest = true
+                appendAssetSizes(for: group)
                 groupedDuplicates.append(groupWithBest)
+            }
+        }
+    }
+    
+    private func appendAssetSizes(for group: [ScreenshotItem]) {
+        let assets = group.compactMap(\.asset)
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var totalSize: Int64 = 0
+            
+            for asset in assets {
+                let resources = PHAssetResource.assetResources(for: asset)
+                for resource in resources where resource.type == .photo {
+                    if let size = resource.value(forKey: "fileSize") as? Int64 {
+                        totalSize += size
+                    }
+                }
+            }
+            
+            DispatchQueue.main.async {
+                self?.assetSizesLock.lock()
+                self?.assetSizes += totalSize
+                self?.assetSizesLock.unlock()
             }
         }
     }
