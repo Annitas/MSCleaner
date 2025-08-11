@@ -112,11 +112,21 @@ final class PhotosService {
     }
     
     func processDuplicatesAsync(from grouped: [Date: [ScreenshotItem]]) {
+        let operationGroup = DispatchGroup()
+        
         for (date, items) in grouped {
             let operation = BlockOperation { [weak self] in
                 self?.processDuplicates(for: date, items: items)
             }
+            operationGroup.enter()
+            operation.completionBlock = {
+                operationGroup.leave()
+            }
             processingQueue.addOperation(operation)
+        }
+        
+        operationGroup.notify(queue: .main) { [weak self] in
+            self?.sortGroupedDuplicates()
         }
     }
     
@@ -140,6 +150,16 @@ final class PhotosService {
                 groupWithBest[0].isBest = true
                 appendAssetSizes(for: group)
                 groupedDuplicates.append(groupWithBest)
+            }
+        }
+    }
+    
+    private func sortGroupedDuplicates() {
+        DispatchQueue.main.async { [weak self] in
+            self?.groupedDuplicates.sort { group1, group2 in
+                let date1 = group1.first?.creationDate ?? Date.distantPast
+                let date2 = group2.first?.creationDate ?? Date.distantPast
+                return date1 > date2
             }
         }
     }
