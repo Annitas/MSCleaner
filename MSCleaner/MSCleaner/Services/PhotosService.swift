@@ -30,10 +30,10 @@ final class PhotosService {
     init(albumType: MediaAlbumType) {
         self.albumType = albumType
         processingQueue.maxConcurrentOperationCount = 2
-        fetchScreenshots() // TODO: Rename to main photos
+        fetchPhotos()
     }
     
-    func fetchScreenshots() {
+    func fetchPhotos() {
         PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
             guard status == .authorized || status == .limited else { return }
             self.loadAssets()
@@ -44,39 +44,24 @@ final class PhotosService {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         let collection: PHAssetCollection?
+        let albumSubtype: PHAssetCollectionSubtype
+        
         switch albumType {
         case .screenshots:
-            collection = PHAssetCollection.fetchAssetCollections(
-                with: .smartAlbum,
-                subtype: .smartAlbumScreenshots,
-                options: nil
-            ).firstObject
-            
+            albumSubtype = .smartAlbumScreenshots
         case .similarPhotos:
-            fetchOptions.predicate = NSPredicate(
-                format: "mediaSubtype != %d",
-                PHAssetMediaSubtype.photoScreenshot.rawValue
-            )
-            collection = PHAssetCollection.fetchAssetCollections(
-                with: .smartAlbum,
-                subtype: .smartAlbumUserLibrary,
-                options: nil
-            ).firstObject
-            
+            albumSubtype = .smartAlbumUserLibrary
         case .screenRecordings:
-            collection = PHAssetCollection.fetchAssetCollections(
-                with: .smartAlbum,
-                subtype: .smartAlbumVideos, // TODO: find screen recordings
-                options: nil
-            ).firstObject
-            
+            albumSubtype = .smartAlbumVideos
         case .videoDuplicates:
-            collection = PHAssetCollection.fetchAssetCollections(
-                with: .smartAlbum,
-                subtype: .smartAlbumVideos,
-                options: nil
-            ).firstObject
+            albumSubtype = .smartAlbumVideos
         }
+        
+        collection = PHAssetCollection.fetchAssetCollections(
+            with: .smartAlbum,
+            subtype: albumSubtype,
+            options: nil
+        ).firstObject
         
         guard let collection else { return }
         let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
@@ -132,15 +117,17 @@ final class PhotosService {
     
     private func processDuplicates(for date: Date, items: [ScreenshotItem]) {
         var visited = Set<Int>()
-        for i in 0..<items.count {
+        for i in 0 ..< items.count {
             guard !visited.contains(i) else { continue }
             var group = [items[i]]
             visited.insert(i)
             
-            for j in (i + 1)..<items.count {
+            for j in (i + 1) ..< items.count {
                 guard !visited.contains(j) else { continue }
                 if isSimilarPhotos(firstItem: items[i], secondItem: items[j]) {
-                    group.append(items[j])
+                    var itemToAppend = items[j]
+                    itemToAppend.isSelected = true
+                    group.append(itemToAppend)
                     visited.insert(j)
                 }
             }
@@ -148,6 +135,7 @@ final class PhotosService {
             if group.count > 1 {
                 var groupWithBest = group
                 groupWithBest[0].isBest = true
+                groupWithBest[0].isSelected = false
                 appendAssetSizes(for: group)
                 groupedDuplicates.append(groupWithBest)
             }
