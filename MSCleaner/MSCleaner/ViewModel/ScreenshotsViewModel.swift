@@ -19,6 +19,11 @@ final class ScreenshotsViewModel: ObservableObject {
     private let dataSizeQueue = DispatchQueue(label: "data.size.calculation", attributes: .concurrent)
     private let updateQueue = DispatchQueue(label: "data.updates", attributes: .concurrent)
     private var cancellables = Set<AnyCancellable>()
+    
+    var formattedDeletedDataAmount: String {
+        ByteCountFormatter.string(fromByteCount: deletedDataAmount, countStyle: .file)
+    }
+    
     let photoService: PhotosService
     
     init(photoService: PhotosService) {
@@ -35,6 +40,10 @@ final class ScreenshotsViewModel: ObservableObject {
                 self?.calculateDataAmount()
             }
             .store(in: &cancellables)
+        
+        $groupedDuplicates
+                .map { $0.flatMap { $0 }.filter { $0.isSelected }.count }
+                .assign(to: &$selectedItemCount)
     }
     
     @MainActor
