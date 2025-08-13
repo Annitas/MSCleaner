@@ -13,7 +13,7 @@ struct PhotoItem: Identifiable {
     let image: UIImage
     let creationDate: Date
     let asset: PHAsset
-    let data: Int64
+    var data: Int64 = 0
     var isSelected: Bool = false
     var isBest: Bool = false
 }
