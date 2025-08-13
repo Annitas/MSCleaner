@@ -8,11 +8,12 @@
 import SwiftUI
 import Photos
 
-struct ScreenshotItem: Identifiable {
+struct PhotoItem: Identifiable {
     let id = UUID()
     let image: UIImage
     let creationDate: Date
     let asset: PHAsset
+    let data: Int64
     var isSelected: Bool = false
     var isBest: Bool = false
 }

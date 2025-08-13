@@ -11,21 +11,21 @@ import CoreData
 struct PhotosAndVideosView: View {
     @StateObject var viewModel = PhotosAndVideosViewModel()
     
-    private var items: [PhotosVideoItem] {
+    private var items: [MediaTitle] {
         [
-            PhotosVideoItem(
+            MediaTitle(
                 title: "Screenshots",
                 size: viewModel.formattedScreenshotsDataSize
             ),
-            PhotosVideoItem(
+            MediaTitle(
                 title: "Screen recordings",
                 size: "2.2 GB" // TODO: Заменить на динамическое значение
             ),
-            PhotosVideoItem(
+            MediaTitle(
                 title: "Similar photos",
                 size: viewModel.formattedSimilarPhotosDataSize
             ),
-            PhotosVideoItem(
+            MediaTitle(
                 title: "Video duplicates",
                 size: "2.2 GB" // TODO: Заменить на динамическое значение
             ),

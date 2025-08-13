@@ -12,7 +12,7 @@ import Combine
 final class ScreenshotsViewModel: ObservableObject {
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
-    @Published private(set) var groupedDuplicates: [[ScreenshotItem]] = []
+    @Published private(set) var groupedDuplicates: [[PhotoItem]] = []
     @Published var dataAmount: Int64 = 0
     
     private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
@@ -34,16 +34,18 @@ final class ScreenshotsViewModel: ObservableObject {
             .assign(to: &$groupedDuplicates)
         
         $groupedDuplicates
-            .dropFirst()
-            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.calculateDataAmount()
+            .map { $0.flatMap { $0 } }
+            .map { items in
+                items
+                    .filter { $0.isSelected }
+                    .map(\.data)
+                    .reduce(0, +)
             }
-            .store(in: &cancellables)
+            .assign(to: &$deletedDataAmount)
         
         $groupedDuplicates
-                .map { $0.flatMap { $0 }.filter { $0.isSelected }.count }
-                .assign(to: &$selectedItemCount)
+            .map { $0.flatMap { $0 }.filter { $0.isSelected }.count }
+            .assign(to: &$selectedItemCount)
     }
     
     @MainActor
@@ -74,7 +76,7 @@ final class ScreenshotsViewModel: ObservableObject {
     }
     
     @MainActor
-    func toggleSelection(for item: ScreenshotItem) {
+    func toggleSelection(for item: PhotoItem) {
         guard let (groupIndex, itemIndex) = findItemIndices(for: item) else {
             print("!!! Error toggleSelection: item not found")
             return
@@ -96,7 +98,7 @@ final class ScreenshotsViewModel: ObservableObject {
         objectWillChange.send()
     }
     
-    private func findItemIndices(for item: ScreenshotItem) -> (Int, Int)? {
+    private func findItemIndices(for item: PhotoItem) -> (Int, Int)? {
         for (groupIndex, group) in groupedDuplicates.enumerated() {
             for (itemIndex, duplicate) in group.enumerated() {
                 if duplicate.id == item.id {
@@ -187,7 +189,7 @@ final class ScreenshotsViewModel: ObservableObject {
     
     @MainActor
     private func removeDeletedItems(_ deletedAssets: [PHAsset]) {
-        var filteredGroups: [[ScreenshotItem]] = []
+        var filteredGroups: [[PhotoItem]] = []
         
         for group in groupedDuplicates {
             let filteredGroup = group.filter { !deletedAssets.contains($0.asset) }

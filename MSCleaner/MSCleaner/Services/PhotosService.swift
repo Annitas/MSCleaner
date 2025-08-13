@@ -17,15 +17,14 @@ enum MediaAlbumType {
 }
 
 final class PhotosService {
-    @Published var groupedDuplicates: [[ScreenshotItem]] = []
+    @Published var groupedDuplicates: [[PhotoItem]] = []
     @Published var assetSizes: Int64 = 0
     
+    private let grouppedService = MediaGrouppingService()
     private let assetSizesLock = NSLock()
     private let albumType: MediaAlbumType
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     private let processingQueue = OperationQueue()
-    private let calendar = Calendar.current
-    private let imageManager = PHCachingImageManager()
     
     init(albumType: MediaAlbumType) {
         self.albumType = albumType
@@ -44,7 +43,7 @@ final class PhotosService {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         let collection: PHAssetCollection?
-        let albumSubtype: PHAssetCollectionSubtype
+        var albumSubtype: PHAssetCollectionSubtype
         
         switch albumType {
         case .screenshots:
@@ -68,35 +67,13 @@ final class PhotosService {
         let requestOptions = PHImageRequestOptions()
         requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isSynchronous = false
-        var groupedByDate: [Date: [ScreenshotItem]] = [:]
-        let requestImagesGroup = DispatchGroup()
-        let requestImagesSemaphore = DispatchSemaphore(value: 4)
-        assets.enumerateObjects { [weak self] asset, _, _  in
-            guard let self = self, let creationDate = asset.creationDate else { return }
-            let dateKey = self.calendar.startOfDay(for: creationDate)
-            requestImagesGroup.enter()
-            requestImagesSemaphore.wait()
-            self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300),
-                                           contentMode: .aspectFill,
-                                           options: requestOptions) { image, _ in
-                defer {
-                    requestImagesSemaphore.signal()
-                    requestImagesGroup.leave()
-                }
-                guard let image else { return }
-                let item = ScreenshotItem(image: image, creationDate: creationDate, asset: asset)
-                groupedByDate[dateKey, default: []].append(item)
-            }
-        }
         
-        requestImagesGroup.notify(queue: .main) { [weak self] in
-            guard let self = self else { return }
-            self.processDuplicatesAsync(from: groupedByDate)
-            print("COMPLETED")
+        Task {
+            self.processDuplicatesAsync(from: await grouppedService.getGrouppedPhotos(assets: assets))
         }
     }
     
-    func processDuplicatesAsync(from grouped: [Date: [ScreenshotItem]]) {
+    func processDuplicatesAsync(from grouped: [Date: [PhotoItem]]) {
         let operationGroup = DispatchGroup()
         
         for (date, items) in grouped {
@@ -115,7 +92,7 @@ final class PhotosService {
         }
     }
     
-    private func processDuplicates(for date: Date, items: [ScreenshotItem]) {
+    private func processDuplicates(for date: Date, items: [PhotoItem]) {
         var visited = Set<Int>()
         for i in 0 ..< items.count {
             guard !visited.contains(i) else { continue }
@@ -152,7 +129,7 @@ final class PhotosService {
         }
     }
     
-    private func appendAssetSizes(for group: [ScreenshotItem]) {
+    private func appendAssetSizes(for group: [PhotoItem]) {
         let assets = group.compactMap(\.asset)
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -175,7 +152,7 @@ final class PhotosService {
         }
     }
     
-    private func isSimilarPhotos(firstItem: ScreenshotItem, secondItem: ScreenshotItem) -> Bool {
+    private func isSimilarPhotos(firstItem: PhotoItem, secondItem: PhotoItem) -> Bool {
         var distance: Float = 0
         do {
             if let fp1 = featurePrintForImage(image: firstItem.image, cacheKey: firstItem.asset.localIdentifier),
