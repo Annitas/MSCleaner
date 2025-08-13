@@ -113,12 +113,20 @@ final class PhotosService {
                 var groupWithBest = group
                 groupWithBest[0].isBest = true
                 groupWithBest[0].isSelected = false
-                appendAssetSizes(for: group)
+                
+                if let asset = group.first?.asset {
+                    let size = getSizeOfAsset(asset)
+                    for index in 0..<groupWithBest.count {
+                        groupWithBest[index].data = size
+                    }
+                    assetSizes = size * Int64(groupWithBest.count)
+                }
+                
                 groupedDuplicates.append(groupWithBest)
             }
         }
     }
-    
+
     private func sortGroupedDuplicates() {
         DispatchQueue.main.async { [weak self] in
             self?.groupedDuplicates.sort { group1, group2 in
@@ -128,30 +136,7 @@ final class PhotosService {
             }
         }
     }
-    
-    private func appendAssetSizes(for group: [PhotoItem]) {
-        let assets = group.compactMap(\.asset)
-        
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            var totalSize: Int64 = 0
-            
-            for asset in assets {
-                let resources = PHAssetResource.assetResources(for: asset)
-                for resource in resources where resource.type == .photo {
-                    if let size = resource.value(forKey: "fileSize") as? Int64 {
-                        totalSize += size
-                    }
-                }
-            }
-            
-            DispatchQueue.main.async {
-                self?.assetSizesLock.lock()
-                self?.assetSizes += totalSize
-                self?.assetSizesLock.unlock()
-            }
-        }
-    }
-    
+
     private func isSimilarPhotos(firstItem: PhotoItem, secondItem: PhotoItem) -> Bool {
         var distance: Float = 0
         do {
@@ -188,7 +173,8 @@ final class PhotosService {
         return nil
     }
     
-    func getSizeOfAsset(_ asset: PHAsset) -> Int64 {
+    func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
+        guard let asset else { return 0 }
         let resources = PHAssetResource.assetResources(for: asset)
         guard let resource = resources.first else { return 0 }
         if let fileSize = resource.value(forKey: "fileSize") as? Int64 {

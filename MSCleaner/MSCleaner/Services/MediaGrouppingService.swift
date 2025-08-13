@@ -46,7 +46,7 @@ final class MediaGrouppingService {
                 }
                 guard let image else { return }
                 let item = PhotoItem(image: image, creationDate: creationDate, asset: asset)
-                print("\(number) - \(creationDate)")
+//                print("\(number) - \(creationDate)")
                 groupedByDate[dateKey, default: []].append(item)
             }
         }
@@ -70,7 +70,7 @@ final class MediaGrouppingService {
         assets.enumerateObjects { [weak self] asset, number, _ in
             guard let self = self, asset.mediaType == .video else { return }
             let duration = round(asset.duration)
-            let fileSize: Int64 = 5 //self.getSizeOfAsset(asset)
+            let fileSize: Int64 = 5
             requestVideosGroup.enter()
             requestVideosSemaphore.wait()
             self.imageManager.requestImage(for: asset,
@@ -87,7 +87,7 @@ final class MediaGrouppingService {
                                           duration: duration,
                                           fileSize: fileSize)
                 groupedByDuration[duration, default: []].append(videoItem)
-                print("Video \(number) - duration \(duration)s - \(fileSize) bytes")
+//                print("Video \(number) - duration \(duration)s")
             }
         }
         
