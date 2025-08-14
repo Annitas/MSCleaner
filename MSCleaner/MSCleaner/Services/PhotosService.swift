@@ -16,12 +16,21 @@ enum MediaAlbumType {
     case videoDuplicates
 }
 
+struct AssetSize {
+    var screenshotSize: Int64 = 0
+    var screenRecordingsSize: Int64 = 0
+    var similarPhotosSize: Int64 = 0
+    var similarVideosSize: Int64 = 0
+}
+
 final class PhotosService {
+    @Published var screenshots: [[PhotoItem]] = []
+    @Published var screenRecordings: [[VideoItem]] = []
     @Published var groupedDuplicatedPhotos: [[PhotoItem]] = []
     @Published var grouppedDuplicatedVideos: [[VideoItem]] = []
     @Published var assetSizes: Int64 = 0
     
-    private let grouppedService = MediaGrouppingService()
+    private let grouppedService = MediaFetchingService()
     private let assetSizesLock = NSLock()
     private let albumType: MediaAlbumType
     private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
@@ -69,14 +78,43 @@ final class PhotosService {
         requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isSynchronous = false
         
+        switch albumType {
+        case .screenshots:
+            getScreenshots(assets: assets)
+        case .similarPhotos:
+            getPhotos(assets: assets)
+        case .screenRecordings:
+            getScreenrecordings(assets: assets)
+        case .videoDuplicates:
+            getVideos(assets: assets)
+        }
+    }
+    
+    func getScreenshots(assets: PHFetchResult<PHAsset>) {
+        Task {
+            screenshots = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
+        }
+    }
+    
+    func getPhotos(assets: PHFetchResult<PHAsset>) {
         Task {
             self.processDuplicatedPhotosAsync(from: await grouppedService.getGrouppedPhotos(assets: assets))
-            albumSubtype = .smartAlbumVideos
+        }
+    }
+    
+    func getVideos(assets: PHFetchResult<PHAsset>) {
+        Task {
             processDuplicatedVideos(for: await grouppedService.getGrouppedViedos(assets: assets))
         }
     }
     
-    func processDuplicatedVideos(for videos: [TimeInterval : [VideoItem]]) {
+    func getScreenrecordings(assets: PHFetchResult<PHAsset>) {
+        Task {
+            screenRecordings = await grouppedService.getScreenRecordings(assets: assets)
+        }
+    }
+    
+    private func processDuplicatedVideos(for videos: [TimeInterval : [VideoItem]]) {
         var visited = Set<ObjectIdentifier>()
         
         for (_, videoItems) in videos {
@@ -109,7 +147,7 @@ final class PhotosService {
         }
     }
     
-    func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
+    private func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
         let operationGroup = DispatchGroup()
         
         for (date, items) in grouped {
@@ -210,7 +248,7 @@ final class PhotosService {
         return nil
     }
     
-    func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
+    private func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
         guard let asset else { return 0 }
         let resources = PHAssetResource.assetResources(for: asset)
         guard let resource = resources.first else { return 0 }

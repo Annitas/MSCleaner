@@ -8,9 +8,48 @@
 import Photos
 import SwiftUI
 
-final class MediaGrouppingService {
+final class MediaFetchingService {
     private let calendar = Calendar.current
     private let imageManager = PHCachingImageManager()
+    
+    func getScreenshots(assets: PHFetchResult<PHAsset>) async -> [Date: [PhotoItem]] {
+        await withCheckedContinuation { continuation in
+            getScreenshots(assets: assets) { result in
+                continuation.resume(returning: result)
+            }
+        }
+    }
+    
+    func getScreenRecordings(assets: PHFetchResult<PHAsset>) async -> [[VideoItem]] {
+        var groupedByDuration: [VideoItem] = []
+        var videoAssets: [PHAsset] = []
+        assets.enumerateObjects { asset, _, _ in
+            guard asset.mediaType == .video else { return }
+            let resources = PHAssetResource.assetResources(for: asset)
+            if let filename = resources.first?.originalFilename.lowercased(),
+               filename.contains("rpreplay_final") || filename.contains("screen recording") {
+                videoAssets.append(asset)
+            }
+        }
+        await withTaskGroup(of: (VideoItem)?.self) { group in
+            for asset in videoAssets {
+                group.addTask {
+                    let duration = round(asset.duration)
+                    let fileSize: Int64 = 5 // TODO: посчитать реальный размер
+                    let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
+                    guard frames.count == 3 else { return nil }
+                    let videoItem = VideoItem(images: frames, asset: asset, duration: duration, fileSize: fileSize)
+                    return (videoItem)
+                }
+            }
+            for await result in group {
+                if let videoItem = result {
+                    groupedByDuration.append(videoItem)
+                }
+            }
+        }
+        return [groupedByDuration]
+    }
     
     func getGrouppedPhotos(assets: PHFetchResult<PHAsset>) async -> [Date: [PhotoItem]] {
         await withCheckedContinuation { continuation in
@@ -51,8 +90,36 @@ final class MediaGrouppingService {
         return groupedByDuration
     }
     
+    private func getScreenshots(assets: PHFetchResult<PHAsset>,
+                                completion: @escaping ([Date: [PhotoItem]]) -> Void) {
+        let requestOptions = PHImageRequestOptions()
+        requestOptions.deliveryMode = .highQualityFormat
+        requestOptions.isSynchronous = false
+        var groupedByDate: [Date: [PhotoItem]] = [:]
+        let requestImagesGroup = DispatchGroup()
+        let dateKey = Date()
+        assets.enumerateObjects { [weak self] asset, number, _  in
+            guard let self = self, let creationDate = asset.creationDate else { return }
+            requestImagesGroup.enter()
+            self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300),
+                                           contentMode: .aspectFill,
+                                           options: requestOptions) { image, _ in
+                defer {
+                    requestImagesGroup.leave()
+                }
+                guard let image else { return }
+                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset)
+                groupedByDate[dateKey, default: []].append(item)
+            }
+        }
+        requestImagesGroup.notify(queue: .main) {
+            completion(groupedByDate)
+            print("IMAGES COMPLETED")
+        }
+    }
+    
     private func getGrouppedPhotos(assets: PHFetchResult<PHAsset>,
-                                   completion: @escaping ([Date: [PhotoItem]]) -> Void ) {
+                                   completion: @escaping ([Date: [PhotoItem]]) -> Void) {
         let requestOptions = PHImageRequestOptions()
         requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isSynchronous = false
