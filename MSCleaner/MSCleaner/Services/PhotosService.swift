@@ -193,7 +193,7 @@ final class PhotosService {
                     for index in 0..<groupWithBest.count {
                         groupWithBest[index].data = size
                     }
-                    assetSizes = size * Int64(groupWithBest.count)
+                    assetSizes += size * Int64(groupWithBest.count)
                 }
                 
                 groupedDuplicatedPhotos.append(groupWithBest)
