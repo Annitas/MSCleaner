@@ -21,11 +21,34 @@ final class MediaGrouppingService {
     }
     
     func getGrouppedViedos(assets: PHFetchResult<PHAsset>) async -> [TimeInterval: [VideoItem]] {
-        await withCheckedContinuation { continuation in
-            getGrouppedViedos(assets: assets) { result in
-                continuation.resume(returning: result)
+        var groupedByDuration: [TimeInterval: [VideoItem]] = [:]
+        var videoAssets: [PHAsset] = []
+        assets.enumerateObjects { asset, _, _ in
+            if asset.mediaType == .video {
+                videoAssets.append(asset)
             }
         }
+        
+        await withTaskGroup(of: (TimeInterval, VideoItem)?.self) { group in
+            for asset in videoAssets {
+                group.addTask {
+                    let duration = round(asset.duration)
+                    let fileSize: Int64 = 5 // TODO: посчитать реальный размер
+                    let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
+                    guard frames.count == 3 else { return nil }
+                    let videoItem = VideoItem(images: frames, asset: asset, duration: duration, fileSize: fileSize)
+                    return (duration, videoItem)
+                }
+            }
+            for await result in group {
+                if let (duration, videoItem) = result {
+                    groupedByDuration[duration, default: []].append(videoItem)
+                }
+            }
+        }
+        
+        print("VIDEO GROUPING COMPLETED")
+        return groupedByDuration
     }
     
     private func getGrouppedPhotos(assets: PHFetchResult<PHAsset>,
@@ -57,84 +80,44 @@ final class MediaGrouppingService {
         }
     }
     
-    private func getGrouppedViedos(assets: PHFetchResult<PHAsset>,
-                                   completion: @escaping ([TimeInterval: [VideoItem]]) -> Void) {
-        var groupedByDuration: [TimeInterval: [VideoItem]] = [:]
-        let requestVideosGroup = DispatchGroup()
-        let requestVideosSemaphore = DispatchSemaphore(value: 2)
-        
-        let imageRequestOptions = PHImageRequestOptions()
-        imageRequestOptions.deliveryMode = .fastFormat
-        imageRequestOptions.isSynchronous = true
-        
-        assets.enumerateObjects { [weak self] asset, number, _ in
-            guard let self = self, asset.mediaType == .video else { return }
-            let duration = round(asset.duration)
-            let fileSize: Int64 = 5
-            
-            requestVideosGroup.enter()
-            requestVideosSemaphore.wait()
-            
-            DispatchQueue.global().async {
-                let frames = self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
-                defer {
-                    requestVideosSemaphore.signal()
-                    requestVideosGroup.leave()
-                }
-                guard frames.count == 3 else { return }
-                let videoItem = VideoItem(
-                    images: frames,
-                    asset: asset,
-                    duration: duration,
-                    fileSize: fileSize
-                )
-                groupedByDuration[duration, default: []].append(videoItem)
-            }
-        }
-        
-        requestVideosGroup.notify(queue: .main) {
-            completion(groupedByDuration)
-            print("VIDEO GROUPING COMPLETED")
-        }
-    }
     
-    private func requestPreviewFrames(for asset: PHAsset, targetSize: CGSize) -> [UIImage] {
-        var images: [UIImage] = []
-        let semaphore = DispatchSemaphore(value: 0)
-        
-        let options = PHVideoRequestOptions()
-        options.version = .current
-        options.deliveryMode = .highQualityFormat
-        
-        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
-            guard let avAsset = avAsset else {
-                semaphore.signal()
-                return
-            }
+    
+    private func requestPreviewFrames(for asset: PHAsset, targetSize: CGSize) async -> [UIImage] {
+        await withCheckedContinuation { continuation in
+            let options = PHVideoRequestOptions()
+            options.version = .current
+            options.deliveryMode = .highQualityFormat
             
-            let generator = AVAssetImageGenerator(asset: avAsset)
-            generator.appliesPreferredTrackTransform = true
-            generator.maximumSize = targetSize
-            
-            let durationSeconds = CMTimeGetSeconds(avAsset.duration)
-            let times = [
-                CMTime(seconds: 0, preferredTimescale: 600),
-                CMTime(seconds: durationSeconds / 2, preferredTimescale: 600),
-                CMTime(seconds: max(durationSeconds - 0.1, 0), preferredTimescale: 600)
-            ].map { NSValue(time: $0) }
-            
-            var processed = 0
-            generator.generateCGImagesAsynchronously(forTimes: times) { _, cgImage, _, _, _ in
-                if let cgImage = cgImage {
-                    images.append(UIImage(cgImage: cgImage))
+            PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+                guard let avAsset = avAsset else {
+                    continuation.resume(returning: [])
+                    return
                 }
-                processed += 1
-                if processed == times.count {
-                    semaphore.signal()
+                
+                let generator = AVAssetImageGenerator(asset: avAsset)
+                generator.appliesPreferredTrackTransform = true
+                generator.maximumSize = targetSize
+                
+                let durationSeconds = CMTimeGetSeconds(avAsset.duration)
+                let times = [
+                    CMTime(seconds: 0, preferredTimescale: 600),
+                    CMTime(seconds: durationSeconds / 2, preferredTimescale: 600),
+                    CMTime(seconds: max(durationSeconds - 0.1, 0), preferredTimescale: 600)
+                ].map { NSValue(time: $0) }
+                
+                var images: [UIImage] = []
+                var processed = 0
+                
+                generator.generateCGImagesAsynchronously(forTimes: times) { _, cgImage, _, _, _ in
+                    if let cgImage = cgImage {
+                        images.append(UIImage(cgImage: cgImage))
+                    }
+                    processed += 1
+                    if processed == times.count {
+                        continuation.resume(returning: images)
+                    }
                 }
             }
         }
-        semaphore.wait()
-        return images
     }
 }

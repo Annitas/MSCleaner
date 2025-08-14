@@ -72,8 +72,7 @@ final class PhotosService {
         Task {
             self.processDuplicatedPhotosAsync(from: await grouppedService.getGrouppedPhotos(assets: assets))
             albumSubtype = .smartAlbumVideos
-            let videos = await grouppedService.getGrouppedViedos(assets: assets)
-            processDuplicatedVideos(for: videos)
+            processDuplicatedVideos(for: await grouppedService.getGrouppedViedos(assets: assets))
         }
     }
     
@@ -90,25 +89,21 @@ final class PhotosService {
                 var duplicates = [videoItems[i]]
                 visited.insert(id1)
                 
-                for j in (i+1)..<videoItems.count {
+                for j in (i+1)..<videoItems.count { // TODO: Refactor
                     let id2 = ObjectIdentifier(videoItems[j] as AnyObject)
                     guard !visited.contains(id2) else { continue }
-                    var similarCount = 0
                     for index in 0 ..< 3 {
                         if videoItems[i].images[index].pngData() == videoItems[j].images[index].pngData() {
-                            similarCount += 1
                             print("WOOWOWOWOW")
                         }
                     }
-                    if similarCount == 3 {
-                        duplicates.append(videoItems[j])
-                    }
+                    duplicates.append(videoItems[j])
                     visited.insert(id2)
                 }
                 
                 if duplicates.count > 1 {
                     grouppedDuplicatedVideos.append(duplicates)
-                    print("!!! FUCKING VIDEOS \(grouppedDuplicatedVideos.first?.count) - \(grouppedDuplicatedVideos.last?.count)")
+                    print("!!! FUCKING VIDEOS \(grouppedDuplicatedVideos)")
                 }
             }
         }
