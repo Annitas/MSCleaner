@@ -24,7 +24,6 @@ struct AssetSize {
 }
 
 final class PhotosService {
-    @Published var screenshots: [[PhotoItem]] = []
     @Published var screenRecordings: [[VideoItem]] = []
     @Published var groupedDuplicatedPhotos: [[PhotoItem]] = []
     @Published var grouppedDuplicatedVideos: [[VideoItem]] = []
@@ -92,7 +91,7 @@ final class PhotosService {
     
     func getScreenshots(assets: PHFetchResult<PHAsset>) {
         Task {
-            screenshots = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
+            groupedDuplicatedPhotos = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
         }
     }
     
