@@ -17,7 +17,8 @@ enum MediaAlbumType {
 }
 
 final class PhotosService {
-    @Published var groupedDuplicates: [[PhotoItem]] = []
+    @Published var groupedDuplicatedPhotos: [[PhotoItem]] = []
+    @Published var grouppedDuplicatedVideos: [[VideoItem]] = []
     @Published var assetSizes: Int64 = 0
     
     private let grouppedService = MediaGrouppingService()
@@ -69,14 +70,55 @@ final class PhotosService {
         requestOptions.isSynchronous = false
         
         Task {
-            self.processDuplicatesAsync(from: await grouppedService.getGrouppedPhotos(assets: assets))
+            self.processDuplicatedPhotosAsync(from: await grouppedService.getGrouppedPhotos(assets: assets))
+            albumSubtype = .smartAlbumVideos
+            let videos = await grouppedService.getGrouppedViedos(assets: assets)
+            processDuplicatedVideos(for: videos)
         }
     }
     
-    func processDuplicatesAsync(from grouped: [Date: [PhotoItem]]) {
+    func processDuplicatedVideos(for videos: [TimeInterval : [VideoItem]]) {
+        var visited = Set<ObjectIdentifier>()
+        
+        for (_, videoItems) in videos {
+            guard videoItems.count > 1 else { continue }
+            
+            for i in 0..<videoItems.count {
+                let id1 = ObjectIdentifier(videoItems[i] as AnyObject)
+                guard !visited.contains(id1) else { continue }
+                
+                var duplicates = [videoItems[i]]
+                visited.insert(id1)
+                
+                for j in (i+1)..<videoItems.count {
+                    let id2 = ObjectIdentifier(videoItems[j] as AnyObject)
+                    guard !visited.contains(id2) else { continue }
+                    var similarCount = 0
+                    for index in 0 ..< 3 {
+                        if videoItems[i].images[index].pngData() == videoItems[j].images[index].pngData() {
+                            similarCount += 1
+                            print("WOOWOWOWOW")
+                        }
+                    }
+                    if similarCount == 3 {
+                        duplicates.append(videoItems[j])
+                    }
+                    visited.insert(id2)
+                }
+                
+                if duplicates.count > 1 {
+                    grouppedDuplicatedVideos.append(duplicates)
+                    print("!!! FUCKING VIDEOS \(grouppedDuplicatedVideos.first?.count) - \(grouppedDuplicatedVideos.last?.count)")
+                }
+            }
+        }
+    }
+    
+    func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
         let operationGroup = DispatchGroup()
         
         for (date, items) in grouped {
+            guard items.count > 1 else { continue }
             let operation = BlockOperation { [weak self] in
                 self?.processDuplicates(for: date, items: items)
             }
@@ -122,21 +164,21 @@ final class PhotosService {
                     assetSizes = size * Int64(groupWithBest.count)
                 }
                 
-                groupedDuplicates.append(groupWithBest)
+                groupedDuplicatedPhotos.append(groupWithBest)
             }
         }
     }
-
+    
     private func sortGroupedDuplicates() {
         DispatchQueue.main.async { [weak self] in
-            self?.groupedDuplicates.sort { group1, group2 in
+            self?.groupedDuplicatedPhotos.sort { group1, group2 in
                 let date1 = group1.first?.creationDate ?? Date.distantPast
                 let date2 = group2.first?.creationDate ?? Date.distantPast
                 return date1 > date2
             }
         }
     }
-
+    
     private func isSimilarPhotos(firstItem: PhotoItem, secondItem: PhotoItem) -> Bool {
         var distance: Float = 0
         do {

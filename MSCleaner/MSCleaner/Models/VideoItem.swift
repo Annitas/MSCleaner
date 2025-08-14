@@ -9,7 +9,7 @@ import SwiftUI
 import Photos
 
 struct VideoItem {
-    let preview: UIImage
+    let images: [UIImage]
     let asset: PHAsset
     let duration: TimeInterval
     let fileSize: Int64

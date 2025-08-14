@@ -6,6 +6,7 @@
 //
 
 import Photos
+import SwiftUI
 
 final class MediaGrouppingService {
     private let calendar = Calendar.current
@@ -46,7 +47,6 @@ final class MediaGrouppingService {
                 }
                 guard let image else { return }
                 let item = PhotoItem(image: image, creationDate: creationDate, asset: asset)
-//                print("\(number) - \(creationDate)")
                 groupedByDate[dateKey, default: []].append(item)
             }
         }
@@ -71,23 +71,24 @@ final class MediaGrouppingService {
             guard let self = self, asset.mediaType == .video else { return }
             let duration = round(asset.duration)
             let fileSize: Int64 = 5
+            
             requestVideosGroup.enter()
             requestVideosSemaphore.wait()
-            self.imageManager.requestImage(for: asset,
-                                           targetSize: CGSize(width: 300, height: 300),
-                                           contentMode: .aspectFill,
-                                           options: imageRequestOptions) { previewImage, _ in
+            
+            DispatchQueue.global().async {
+                let frames = self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
                 defer {
                     requestVideosSemaphore.signal()
                     requestVideosGroup.leave()
                 }
-                guard let previewImage else { return }
-                let videoItem = VideoItem(preview: previewImage,
-                                          asset: asset,
-                                          duration: duration,
-                                          fileSize: fileSize)
+                guard frames.count == 3 else { return }
+                let videoItem = VideoItem(
+                    images: frames,
+                    asset: asset,
+                    duration: duration,
+                    fileSize: fileSize
+                )
                 groupedByDuration[duration, default: []].append(videoItem)
-//                print("Video \(number) - duration \(duration)s")
             }
         }
         
@@ -95,5 +96,45 @@ final class MediaGrouppingService {
             completion(groupedByDuration)
             print("VIDEO GROUPING COMPLETED")
         }
+    }
+    
+    private func requestPreviewFrames(for asset: PHAsset, targetSize: CGSize) -> [UIImage] {
+        var images: [UIImage] = []
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        let options = PHVideoRequestOptions()
+        options.version = .current
+        options.deliveryMode = .highQualityFormat
+        
+        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+            guard let avAsset = avAsset else {
+                semaphore.signal()
+                return
+            }
+            
+            let generator = AVAssetImageGenerator(asset: avAsset)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = targetSize
+            
+            let durationSeconds = CMTimeGetSeconds(avAsset.duration)
+            let times = [
+                CMTime(seconds: 0, preferredTimescale: 600),
+                CMTime(seconds: durationSeconds / 2, preferredTimescale: 600),
+                CMTime(seconds: max(durationSeconds - 0.1, 0), preferredTimescale: 600)
+            ].map { NSValue(time: $0) }
+            
+            var processed = 0
+            generator.generateCGImagesAsynchronously(forTimes: times) { _, cgImage, _, _, _ in
+                if let cgImage = cgImage {
+                    images.append(UIImage(cgImage: cgImage))
+                }
+                processed += 1
+                if processed == times.count {
+                    semaphore.signal()
+                }
+            }
+        }
+        semaphore.wait()
+        return images
     }
 }

@@ -29,7 +29,11 @@ final class ScreenshotsViewModel: ObservableObject {
     init(photoService: PhotosService) {
         self.photoService = photoService
         
-        photoService.$groupedDuplicates
+        photoService.$assetSizes
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$dataAmount)
+        
+        photoService.$groupedDuplicatedPhotos
             .receive(on: DispatchQueue.main)
             .assign(to: &$groupedDuplicates)
         
