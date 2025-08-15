@@ -28,7 +28,7 @@ final class PhotosAndVideosViewModel: ObservableObject {
         
         screenshotsVM.$dataAmount
             .receive(on: DispatchQueue.main)
-            .assign(to: \.screenshotsVMdataSize, on: self)
+            .assign(to: \.similarPhotosVMdataSize, on: self)
             .store(in: &cancellables)
         
         similarPhotosVM.$dataAmount
