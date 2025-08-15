@@ -64,7 +64,7 @@ struct PhotosAndVideosView: View {
                 viewModel: viewModel.screenshotsVM
             )
         case "Screen recordings":
-            ScreenshotsView(
+            VideosView(
                 title: "Screen recordings",
                 viewModel: viewModel.screenRecordingsVM
             )
@@ -73,8 +73,11 @@ struct PhotosAndVideosView: View {
                 title: "Similar photos",
                 viewModel: viewModel.similarPhotosVM
             )
-            //        case "Video duplicates":
-            //            VideoDuplicatesView()
+        case "Video duplicates":
+            VideosView(
+                title: "Video duplicates",
+                viewModel: viewModel.similarVideosVM
+            )
         default:
             Text("Unknown item")
         }
