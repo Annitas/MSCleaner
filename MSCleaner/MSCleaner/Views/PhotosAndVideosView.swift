@@ -63,8 +63,11 @@ struct PhotosAndVideosView: View {
                 title: "Screenshots",
                 viewModel: viewModel.screenshotsVM
             )
-            //        case "Screen recordings":
-            //            ScreenRecordingsView()
+        case "Screen recordings":
+            ScreenshotsView(
+                title: "Screen recordings",
+                viewModel: viewModel.screenRecordingsVM
+            )
         case "Similar photos":
             ScreenshotsView(
                 title: "Similar photos",

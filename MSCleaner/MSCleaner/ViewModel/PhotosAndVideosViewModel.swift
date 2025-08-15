@@ -11,6 +11,7 @@ import Combine
 final class PhotosAndVideosViewModel: ObservableObject {
     @Published var screenshotsVM: ScreenshotsViewModel
     @Published var similarPhotosVM: ScreenshotsViewModel
+    @Published var screenRecordingsVM: ScreenshotsViewModel
     @Published var screenshotsVMdataSize: Int64 = 0
     @Published var similarPhotosVMdataSize: Int64 = 0
     
@@ -19,9 +20,11 @@ final class PhotosAndVideosViewModel: ObservableObject {
     init() {
         let screenshotsService = PhotosService(albumType: .screenshots)
         let similarPhotosService = PhotosService(albumType: .similarPhotos)
+        let screenRecordingsService = PhotosService(albumType: .screenRecordings)
         
         self.screenshotsVM = ScreenshotsViewModel(photoService: screenshotsService)
         self.similarPhotosVM = ScreenshotsViewModel(photoService: similarPhotosService)
+        self.screenRecordingsVM = ScreenshotsViewModel(photoService: screenRecordingsService)
         
         screenshotsVM.$dataAmount
             .receive(on: DispatchQueue.main)

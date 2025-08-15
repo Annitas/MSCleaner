@@ -27,7 +27,7 @@ final class MediaFetchingService {
             guard asset.mediaType == .video else { return }
             let resources = PHAssetResource.assetResources(for: asset)
             if let filename = resources.first?.originalFilename.lowercased(),
-               filename.contains("rpreplay_final") || filename.contains("screen recording") {
+               filename.contains("rpreplay_final") || filename.contains("screenrecording") {
                 videoAssets.append(asset)
             }
         }
