@@ -8,9 +8,11 @@
 import SwiftUI
 import Photos
 
-struct VideoItem {
+struct VideoItem: Identifiable {
+    let id = UUID()
     let images: [UIImage]
     let asset: PHAsset
     let duration: TimeInterval
     let fileSize: Int64
+    var isSelected: Bool = false
 }

@@ -12,7 +12,8 @@ import Combine
 final class ScreenshotsViewModel: ObservableObject {
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
-    @Published private(set) var groupedDuplicates: [[PhotoItem]] = []
+    @Published private(set) var groupedPhotoDuplicates: [[PhotoItem]] = []
+    @Published private(set) var groupedVideoDuplicates: [[VideoItem]] = []
     @Published var dataAmount: Int64 = 0
     
     private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
@@ -35,9 +36,13 @@ final class ScreenshotsViewModel: ObservableObject {
         
         photoService.$groupedDuplicatedPhotos
             .receive(on: DispatchQueue.main)
-            .assign(to: &$groupedDuplicates)
+            .assign(to: &$groupedPhotoDuplicates)
         
-        $groupedDuplicates
+        photoService.$grouppedDuplicatedVideos
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$groupedVideoDuplicates)
+        
+        $groupedPhotoDuplicates
             .map { $0.flatMap { $0 } }
             .map { items in
                 items
@@ -47,7 +52,7 @@ final class ScreenshotsViewModel: ObservableObject {
             }
             .assign(to: &$deletedDataAmount)
         
-        $groupedDuplicates
+        $groupedPhotoDuplicates
             .map { $0.flatMap { $0 }.filter { $0.isSelected }.count }
             .assign(to: &$selectedItemCount)
     }
@@ -59,16 +64,16 @@ final class ScreenshotsViewModel: ObservableObject {
         selectedItemCount = 0
         deletedDataAmount = 0
         
-        for groupIndex in groupedDuplicates.indices {
-            for itemIndex in groupedDuplicates[groupIndex].indices {
-                let item = groupedDuplicates[groupIndex][itemIndex]
+        for groupIndex in groupedPhotoDuplicates.indices {
+            for itemIndex in groupedPhotoDuplicates[groupIndex].indices {
+                let item = groupedPhotoDuplicates[groupIndex][itemIndex]
                 
                 if item.isBest {
-                    groupedDuplicates[groupIndex][itemIndex].isSelected = false
+                    groupedPhotoDuplicates[groupIndex][itemIndex].isSelected = false
                     continue
                 }
                 
-                groupedDuplicates[groupIndex][itemIndex].isSelected = shouldSelectAll
+                groupedPhotoDuplicates[groupIndex][itemIndex].isSelected = shouldSelectAll
                 if shouldSelectAll {
                     selectedItemCount += 1
                     deletedDataAmount += getAssetFileSize(for: item.asset)
@@ -86,9 +91,9 @@ final class ScreenshotsViewModel: ObservableObject {
             return
         }
         
-        groupedDuplicates[groupIndex][itemIndex].isSelected.toggle()
+        groupedPhotoDuplicates[groupIndex][itemIndex].isSelected.toggle()
         
-        let isSelected = groupedDuplicates[groupIndex][itemIndex].isSelected
+        let isSelected = groupedPhotoDuplicates[groupIndex][itemIndex].isSelected
         let photoDataSize = getAssetFileSize(for: item.asset)
         
         if isSelected {
@@ -103,7 +108,7 @@ final class ScreenshotsViewModel: ObservableObject {
     }
     
     private func findItemIndices(for item: PhotoItem) -> (Int, Int)? {
-        for (groupIndex, group) in groupedDuplicates.enumerated() {
+        for (groupIndex, group) in groupedPhotoDuplicates.enumerated() {
             for (itemIndex, duplicate) in group.enumerated() {
                 if duplicate.id == item.id {
                     return (groupIndex, itemIndex)
@@ -114,7 +119,7 @@ final class ScreenshotsViewModel: ObservableObject {
     }
     
     func calculateDataAmount() {
-        guard !groupedDuplicates.isEmpty else {
+        guard !groupedPhotoDuplicates.isEmpty else {
             updateDataAmount(0)
             return
         }
@@ -124,7 +129,7 @@ final class ScreenshotsViewModel: ObservableObject {
             
             var totalSize: Int64 = 0
             
-            for group in self.groupedDuplicates {
+            for group in self.groupedPhotoDuplicates {
                 for item in group {
                     totalSize += self.getAssetFileSize(for: item.asset)
                 }
@@ -167,7 +172,7 @@ final class ScreenshotsViewModel: ObservableObject {
     @MainActor
     func deleteSelected() {
         var assetsToDelete: [PHAsset] = []
-        for group in groupedDuplicates {
+        for group in groupedPhotoDuplicates {
             for item in group where item.isSelected {
                 assetsToDelete.append(item.asset)
             }
@@ -195,14 +200,14 @@ final class ScreenshotsViewModel: ObservableObject {
     private func removeDeletedItems(_ deletedAssets: [PHAsset]) {
         var filteredGroups: [[PhotoItem]] = []
         
-        for group in groupedDuplicates {
+        for group in groupedPhotoDuplicates {
             let filteredGroup = group.filter { !deletedAssets.contains($0.asset) }
             if !filteredGroup.isEmpty {
                 filteredGroups.append(filteredGroup)
             }
         }
         
-        groupedDuplicates = filteredGroups
+        groupedPhotoDuplicates = filteredGroups
     }
     
     @MainActor

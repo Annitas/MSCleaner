@@ -13,7 +13,7 @@ struct ScreenshotsView: View {
     @StateObject var viewModel: ScreenshotsViewModel
     
     var body: some View {
-        let photos = viewModel.groupedDuplicates.flatMap { $0 }
+        let photos = viewModel.groupedPhotoDuplicates.flatMap { $0 }
         let resources = photos.flatMap { PHAssetResource.assetResources(for: $0.asset) }
             .filter { $0.type == .photo }
             .reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
@@ -31,7 +31,7 @@ struct ScreenshotsView: View {
             
             ScrollView {
                 LazyVStack(spacing: 20) {
-                    ForEach(Array(viewModel.groupedDuplicates.enumerated()), id: \.offset) { groupIndex, group in
+                    ForEach(Array(viewModel.groupedPhotoDuplicates.enumerated()), id: \.offset) { groupIndex, group in
                         VStack(alignment: .leading, spacing: 8) {
                             Text("\(group.count) items")
                                 .font(.headline)
@@ -116,7 +116,7 @@ struct ScreenshotsView: View {
             }
             .padding(.horizontal)
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.groupedDuplicates.count)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.groupedPhotoDuplicates.count)
         .navigationTitle(title)
     }
 }
