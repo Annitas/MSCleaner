@@ -113,33 +113,28 @@ final class PhotosService {
     }
     
     private func processDuplicatedVideos(for videos: [TimeInterval : [VideoItem]]) {
-        var visited = Set<ObjectIdentifier>()
-        
+        var visited = Set<UUID>()
         for (_, videoItems) in videos {
             guard videoItems.count > 1 else { continue }
             
             for i in 0..<videoItems.count {
-                let id1 = ObjectIdentifier(videoItems[i] as AnyObject)
+                let id1 = videoItems[i].id
                 guard !visited.contains(id1) else { continue }
-                
                 var duplicates = [videoItems[i]]
                 visited.insert(id1)
-                
-                for j in (i+1)..<videoItems.count { // TODO: Refactor
-                    let id2 = ObjectIdentifier(videoItems[j] as AnyObject)
+                for j in (i+1)..<videoItems.count {
+                    let id2 = videoItems[j].id
                     guard !visited.contains(id2) else { continue }
-                    for index in 0 ..< 3 {
-                        if videoItems[i].images[index].pngData() == videoItems[j].images[index].pngData() {
-                            print("WOOWOWOWOW")
-                        }
+                    let isDuplicate = (0..<3).allSatisfy { idx in
+                        videoItems[i].images[idx].pngData() == videoItems[j].images[idx].pngData()
                     }
-                    duplicates.append(videoItems[j])
-                    visited.insert(id2)
+                    if isDuplicate {
+                        duplicates.append(videoItems[j])
+                        visited.insert(id2)
+                    }
                 }
-                
                 if duplicates.count > 1 {
                     grouppedDuplicatedVideos.append(duplicates)
-                    print("!!! FUCKING VIDEOS \(grouppedDuplicatedVideos)")
                 }
             }
         }
