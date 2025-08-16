@@ -29,9 +29,7 @@ final class PhotosService {
     @Published var assetSizes: Int64 = 0
     
     private let grouppedService = MediaFetchingService()
-    private let assetSizesLock = NSLock()
     private let albumType: MediaAlbumType
-    private static let sharedFeatureCache = NSCache<NSString, VNFeaturePrintObservation>()
     private let processingQueue = OperationQueue()
     
     init(albumType: MediaAlbumType) {
@@ -113,42 +111,9 @@ final class PhotosService {
     }
     
     private func processDuplicatedVideos(for videos: [TimeInterval : [VideoItem]]) {
-        var visited = Set<UUID>()
         for (_, videoItems) in videos {
             guard videoItems.count > 1 else { continue }
-            
-            for i in 0..<videoItems.count {
-                let id1 = videoItems[i].id
-                guard !visited.contains(id1) else { continue }
-                var duplicates = [videoItems[i]]
-                visited.insert(id1)
-                for j in (i+1)..<videoItems.count {
-                    let id2 = videoItems[j].id
-                    guard !visited.contains(id2) else { continue }
-                    let isDuplicate = (0..<3).allSatisfy { idx in
-                        videoItems[i].images[idx].pngData() == videoItems[j].images[idx].pngData()
-                    }
-                    if isDuplicate {
-                        duplicates.append(videoItems[j])
-                        visited.insert(id2)
-                    }
-                }
-                if duplicates.count > 1 {
-                    var groupWithBest = duplicates
-                    groupWithBest[0].isBest = true
-                    groupWithBest[0].isSelected = false
-                    
-                    if let asset = duplicates.first?.asset {
-                        let size = getSizeOfAsset(asset)
-                        for index in 0..<groupWithBest.count {
-                            groupWithBest[index].data = size
-                        }
-                        assetSizes += size * Int64(groupWithBest.count)
-                    }
-                    
-                    grouppedDuplicatedVideos.append(duplicates)
-                }
-            }
+            grouppedDuplicatedVideos += VideoDuplicateDetector().findDuplicates(in: videoItems)
         }
     }
     

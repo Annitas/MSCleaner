@@ -16,5 +16,5 @@ struct VideoItem: Identifiable {
     let duration: TimeInterval
     let fileSize: Int64
     var isBest: Bool = false
-    var isSelected: Bool = false
+    var isSelected: Bool = true
 }

@@ -24,9 +24,7 @@ final class PhotoDuplicateDetector {
             for j in (i+1)..<items.count {
                 guard !visited.contains(j) else { continue }
                 if isSimilarPhotos(firstItem: items[i], secondItem: items[j]) {
-                    var duplicate = items[j]
-                    duplicate.isSelected = true
-                    group.append(duplicate)
+                    group.append(items[j])
                     visited.insert(j)
                 }
             }

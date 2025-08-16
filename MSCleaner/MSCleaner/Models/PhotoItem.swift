@@ -14,6 +14,6 @@ struct PhotoItem: Identifiable {
     let creationDate: Date
     let asset: PHAsset
     var data: Int64 = 0
-    var isSelected: Bool = false
+    var isSelected: Bool = true
     var isBest: Bool = false
 }
