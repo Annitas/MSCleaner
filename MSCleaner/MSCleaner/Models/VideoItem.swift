@@ -12,7 +12,9 @@ struct VideoItem: Identifiable {
     let id = UUID()
     let images: [UIImage]
     let asset: PHAsset
+    var data: Int64 = 0
     let duration: TimeInterval
     let fileSize: Int64
+    var isBest: Bool = false
     var isSelected: Bool = false
 }

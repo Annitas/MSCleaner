@@ -134,6 +134,18 @@ final class PhotosService {
                     }
                 }
                 if duplicates.count > 1 {
+                    var groupWithBest = duplicates
+                    groupWithBest[0].isBest = true
+                    groupWithBest[0].isSelected = false
+                    
+                    if let asset = duplicates.first?.asset {
+                        let size = getSizeOfAsset(asset)
+                        for index in 0..<groupWithBest.count {
+                            groupWithBest[index].data = size
+                        }
+                        assetSizes += size * Int64(groupWithBest.count)
+                    }
+                    
                     grouppedDuplicatedVideos.append(duplicates)
                 }
             }
