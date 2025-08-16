@@ -155,10 +155,11 @@ final class PhotosService {
     private func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
         let operationGroup = DispatchGroup()
         
-        for (date, items) in grouped {
+        for (_, items) in grouped {
             guard items.count > 1 else { continue }
             let operation = BlockOperation { [weak self] in
-                self?.processDuplicates(for: date, items: items)
+                let duplicates = PhotoDuplicateDetector().findDuplicates(in: items)
+                self?.groupedDuplicatedPhotos += duplicates
             }
             operationGroup.enter()
             operation.completionBlock = {
@@ -171,42 +172,7 @@ final class PhotosService {
             self?.sortGroupedDuplicates()
         }
     }
-    
-    private func processDuplicates(for date: Date, items: [PhotoItem]) {
-        var visited = Set<Int>()
-        for i in 0 ..< items.count {
-            guard !visited.contains(i) else { continue }
-            var group = [items[i]]
-            visited.insert(i)
-            
-            for j in (i + 1) ..< items.count {
-                guard !visited.contains(j) else { continue }
-                if isSimilarPhotos(firstItem: items[i], secondItem: items[j]) {
-                    var itemToAppend = items[j]
-                    itemToAppend.isSelected = true
-                    group.append(itemToAppend)
-                    visited.insert(j)
-                }
-            }
-            
-            if group.count > 1 {
-                var groupWithBest = group
-                groupWithBest[0].isBest = true
-                groupWithBest[0].isSelected = false
-                
-                if let asset = group.first?.asset {
-                    let size = getSizeOfAsset(asset)
-                    for index in 0..<groupWithBest.count {
-                        groupWithBest[index].data = size
-                    }
-                    assetSizes += size * Int64(groupWithBest.count)
-                }
-                
-                groupedDuplicatedPhotos.append(groupWithBest)
-            }
-        }
-    }
-    
+
     private func sortGroupedDuplicates() {
         DispatchQueue.main.async { [weak self] in
             self?.groupedDuplicatedPhotos.sort { group1, group2 in
@@ -216,43 +182,7 @@ final class PhotosService {
             }
         }
     }
-    
-    private func isSimilarPhotos(firstItem: PhotoItem, secondItem: PhotoItem) -> Bool {
-        var distance: Float = 0
-        do {
-            if let fp1 = featurePrintForImage(image: firstItem.image, cacheKey: firstItem.asset.localIdentifier),
-               let fp2 = featurePrintForImage(image: secondItem.image, cacheKey: secondItem.asset.localIdentifier) {
-                try fp1.computeDistance(&distance, to: fp2)
-            }
-        } catch {
-            print("!!! Error isSimilarPhotos")
-            return false
-        }
-        return distance <= 0.2
-    }
-    
-    private func featurePrintForImage(image: UIImage, cacheKey: String) -> VNFeaturePrintObservation? {
-        if let cached = Self.sharedFeatureCache.object(forKey: cacheKey as NSString) {
-            return cached
-        }
-        
-        guard let cgImage = image.cgImage else { return nil }
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        let request = VNGenerateImageFeaturePrintRequest()
-        
-        do {
-            try handler.perform([request])
-            if let result = request.results?.first as? VNFeaturePrintObservation {
-                Self.sharedFeatureCache.setObject(result, forKey: cacheKey as NSString)
-                return result
-            }
-        } catch {
-            print("!!! Error featurePrintForImage: \(error)")
-        }
-        
-        return nil
-    }
-    
+
     private func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
         guard let asset else { return 0 }
         let resources = PHAssetResource.assetResources(for: asset)
