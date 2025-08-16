@@ -216,7 +216,7 @@ final class PhotosService {
             print("!!! Error isSimilarPhotos")
             return false
         }
-        return distance <= 0.15
+        return distance <= 0.2
     }
     
     private func featurePrintForImage(image: UIImage, cacheKey: String) -> VNFeaturePrintObservation? {
