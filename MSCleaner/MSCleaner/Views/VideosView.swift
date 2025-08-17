@@ -13,7 +13,7 @@ import Photos
 
 struct VideosView: View {
     @State var title: String
-    @StateObject var viewModel: ScreenshotsViewModel
+    @StateObject var viewModel: VideosViewModel
     
     var body: some View {
         let videos = viewModel.groupedVideoDuplicates.flatMap { $0 }
@@ -24,7 +24,7 @@ struct VideosView: View {
                 Text("\(videos.count) videos (\(String(format: "%.2f", totalSizeGB)) GB)")
                 Spacer()
                 Button(viewModel.selectedItemCount == 0 ? "Select all" : "Deselect all") {
-                    viewModel.toggleSelectAll()
+//                    viewModel.toggleSelectAll()
                 }
             }
             .padding(16)
@@ -81,7 +81,6 @@ struct VideosView: View {
                                         .padding(8)
                                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                         
-                                        // Чекбокс выбора
                                         ZStack {
                                             Circle()
                                                 .fill(item.isSelected ? Color.blue : Color.white.opacity(0.7))

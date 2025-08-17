@@ -9,14 +9,12 @@ import SwiftUI
 import Photos
 import Combine
 
-final class ScreenshotsViewModel: ObservableObject {
+final class PhotosViewModel: ObservableObject {
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
     @Published private(set) var groupedPhotoDuplicates: [[PhotoItem]] = []
-    @Published private(set) var groupedVideoDuplicates: [[VideoItem]] = []
     @Published var dataAmount: Int64 = 0
     
-    private let sortedDatesQueue = DispatchQueue(label: "sortedDatesQueue", attributes: .concurrent)
     private let dataSizeQueue = DispatchQueue(label: "data.size.calculation", attributes: .concurrent)
     private let updateQueue = DispatchQueue(label: "data.updates", attributes: .concurrent)
     private var cancellables = Set<AnyCancellable>()
@@ -37,10 +35,6 @@ final class ScreenshotsViewModel: ObservableObject {
         photoService.$groupedDuplicatedPhotos
             .receive(on: DispatchQueue.main)
             .assign(to: &$groupedPhotoDuplicates)
-        
-        photoService.$grouppedDuplicatedVideos
-            .receive(on: DispatchQueue.main)
-            .assign(to: &$groupedVideoDuplicates)
         
         $groupedPhotoDuplicates
             .map { $0.flatMap { $0 } }

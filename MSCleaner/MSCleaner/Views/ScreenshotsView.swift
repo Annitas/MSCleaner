@@ -10,7 +10,7 @@ import Photos
 
 struct ScreenshotsView: View {
     @State var title: String
-    @StateObject var viewModel: ScreenshotsViewModel
+    @StateObject var viewModel: PhotosViewModel
     
     var body: some View {
         let photos = viewModel.groupedPhotoDuplicates.flatMap { $0 }

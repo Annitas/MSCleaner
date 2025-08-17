@@ -9,10 +9,10 @@ import SwiftUI
 import Combine
 
 final class PhotosAndVideosViewModel: ObservableObject {
-    @Published var screenshotsVM: ScreenshotsViewModel
-    @Published var similarPhotosVM: ScreenshotsViewModel
-    @Published var screenRecordingsVM: ScreenshotsViewModel
-    @Published var similarVideosVM: ScreenshotsViewModel
+    @Published var screenshotsVM: PhotosViewModel
+    @Published var similarPhotosVM: PhotosViewModel
+    @Published var screenRecordingsVM: VideosViewModel
+    @Published var similarVideosVM: VideosViewModel
     @Published var screenshotsVMdataSize: Int64 = 0
     @Published var similarPhotosVMdataSize: Int64 = 0
     
@@ -24,10 +24,10 @@ final class PhotosAndVideosViewModel: ObservableObject {
         let screenRecordingsService = PhotosService(albumType: .screenRecordings)
         let similarVideos = PhotosService(albumType: .videoDuplicates)
         
-        self.screenshotsVM = ScreenshotsViewModel(photoService: screenshotsService)
-        self.similarPhotosVM = ScreenshotsViewModel(photoService: similarPhotosService)
-        self.screenRecordingsVM = ScreenshotsViewModel(photoService: screenRecordingsService)
-        self.similarVideosVM = ScreenshotsViewModel(photoService: similarVideos)
+        self.screenshotsVM = PhotosViewModel(photoService: screenshotsService)
+        self.similarPhotosVM = PhotosViewModel(photoService: similarPhotosService)
+        self.screenRecordingsVM = VideosViewModel(photoService: screenRecordingsService)
+        self.similarVideosVM = VideosViewModel(photoService: similarVideos)
         
         screenshotsVM.$dataAmount
             .receive(on: DispatchQueue.main)
