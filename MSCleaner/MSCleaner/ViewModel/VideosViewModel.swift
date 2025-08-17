@@ -46,28 +46,15 @@ final class VideosViewModel: ObservableObject {
     @MainActor
     func toggleSelectAll() {
         let shouldSelectAll = selectedItemCount == 0
-        
-        selectedItemCount = 0
-        deletedDataAmount = 0
-        
         for groupIndex in groupedVideoDuplicates.indices {
             for itemIndex in groupedVideoDuplicates[groupIndex].indices {
-                let item = groupedVideoDuplicates[groupIndex][itemIndex]
-                
-                if item.isBest {
+                if groupedVideoDuplicates[groupIndex][itemIndex].isBest {
                     groupedVideoDuplicates[groupIndex][itemIndex].isSelected = false
-                    continue
-                }
-                
-                groupedVideoDuplicates[groupIndex][itemIndex].isSelected = shouldSelectAll
-                if shouldSelectAll {
-                    selectedItemCount += 1
-                    deletedDataAmount += item.data
+                } else {
+                    groupedVideoDuplicates[groupIndex][itemIndex].isSelected = shouldSelectAll
                 }
             }
         }
-        
-        objectWillChange.send()
     }
     
     @MainActor
