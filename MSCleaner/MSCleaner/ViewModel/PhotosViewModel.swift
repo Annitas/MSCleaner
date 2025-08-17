@@ -15,10 +15,6 @@ final class PhotosViewModel: ObservableObject {
     @Published private(set) var groupedPhotoDuplicates: [[PhotoItem]] = []
     @Published var dataAmount: Int64 = 0
     
-    private let dataSizeQueue = DispatchQueue(label: "data.size.calculation", attributes: .concurrent)
-    private let updateQueue = DispatchQueue(label: "data.updates", attributes: .concurrent)
-    private var cancellables = Set<AnyCancellable>()
-    
     var formattedDeletedDataAmount: String {
         ByteCountFormatter.string(fromByteCount: deletedDataAmount, countStyle: .file)
     }
@@ -54,28 +50,15 @@ final class PhotosViewModel: ObservableObject {
     @MainActor
     func toggleSelectAll() {
         let shouldSelectAll = selectedItemCount == 0
-        
-        selectedItemCount = 0
-        deletedDataAmount = 0
-        
         for groupIndex in groupedPhotoDuplicates.indices {
             for itemIndex in groupedPhotoDuplicates[groupIndex].indices {
-                let item = groupedPhotoDuplicates[groupIndex][itemIndex]
-                
-                if item.isBest {
+                if groupedPhotoDuplicates[groupIndex][itemIndex].isBest {
                     groupedPhotoDuplicates[groupIndex][itemIndex].isSelected = false
-                    continue
-                }
-                
-                groupedPhotoDuplicates[groupIndex][itemIndex].isSelected = shouldSelectAll
-                if shouldSelectAll {
-                    selectedItemCount += 1
-                    deletedDataAmount += getAssetFileSize(for: item.asset)
+                } else {
+                    groupedPhotoDuplicates[groupIndex][itemIndex].isSelected = shouldSelectAll
                 }
             }
         }
-        
-        objectWillChange.send()
     }
     
     @MainActor
@@ -84,21 +67,7 @@ final class PhotosViewModel: ObservableObject {
             print("!!! Error toggleSelection: item not found")
             return
         }
-        
         groupedPhotoDuplicates[groupIndex][itemIndex].isSelected.toggle()
-        
-        let isSelected = groupedPhotoDuplicates[groupIndex][itemIndex].isSelected
-        let photoDataSize = item.data
-        
-        if isSelected {
-            deletedDataAmount += photoDataSize
-            selectedItemCount += 1
-        } else {
-            deletedDataAmount -= photoDataSize
-            selectedItemCount -= 1
-        }
-        
-        objectWillChange.send()
     }
     
     private func findItemIndices(for item: PhotoItem) -> (Int, Int)? {
@@ -110,57 +79,6 @@ final class PhotosViewModel: ObservableObject {
             }
         }
         return nil
-    }
-    
-    func calculateDataAmount() {
-        guard !groupedPhotoDuplicates.isEmpty else {
-            updateDataAmount(0)
-            return
-        }
-        
-        dataSizeQueue.async { [weak self] in
-            guard let self = self else { return }
-            
-            var totalSize: Int64 = 0
-            
-            for group in self.groupedPhotoDuplicates {
-                for item in group {
-                    totalSize += self.getAssetFileSize(for: item.asset)
-                }
-            }
-            
-            self.updateDataAmount(totalSize)
-        }
-    }
-    
-    private func updateDataAmount(_ newValue: Int64) {
-        updateQueue.async(flags: .barrier) { [weak self] in
-            DispatchQueue.main.async {
-                self?.dataAmount = newValue
-            }
-        }
-    }
-    
-    private func getAssetFileSize(for asset: PHAsset) -> Int64 {
-        let resources = PHAssetResource.assetResources(for: asset)
-        if resources.first(where: { $0.type == .photo }) != nil {
-            let requestOptions = PHImageRequestOptions()
-            requestOptions.isSynchronous = true
-            requestOptions.deliveryMode = .fastFormat
-            
-            var fileSize: Int64 = 0
-            let semaphore = DispatchSemaphore(value: 0)
-            
-            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: requestOptions) { data, _, _, _ in
-                fileSize = Int64(data?.count ?? 0)
-                semaphore.signal()
-            }
-            
-            _ = semaphore.wait(timeout: .now() + 2.0)
-            return fileSize
-        }
-        
-        return 0
     }
     
     @MainActor

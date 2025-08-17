@@ -8,9 +8,6 @@
 import SwiftUI
 import Photos
 
-import SwiftUI
-import Photos
-
 struct VideosView: View {
     @State var title: String
     @StateObject var viewModel: VideosViewModel
