@@ -88,7 +88,7 @@ final class PhotosViewModel: ObservableObject {
         groupedPhotoDuplicates[groupIndex][itemIndex].isSelected.toggle()
         
         let isSelected = groupedPhotoDuplicates[groupIndex][itemIndex].isSelected
-        let photoDataSize = getAssetFileSize(for: item.asset)
+        let photoDataSize = item.data
         
         if isSelected {
             deletedDataAmount += photoDataSize

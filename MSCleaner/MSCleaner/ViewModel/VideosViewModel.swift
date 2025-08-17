@@ -15,7 +15,11 @@ final class VideosViewModel: ObservableObject {
     @Published var deletedDataAmount: Int64 = 0
     
     private var cancellables = Set<AnyCancellable>()
-    let photoService: PhotosService
+    private let photoService: PhotosService
+    
+    var formattedDeletedDataAmount: String {
+        ByteCountFormatter.string(fromByteCount: deletedDataAmount, countStyle: .file)
+    }
     
     init(photoService: PhotosService) {
         self.photoService = photoService
@@ -37,6 +41,33 @@ final class VideosViewModel: ObservableObject {
         $groupedVideoDuplicates
             .map { $0.flatMap { $0 }.filter { $0.isSelected }.count }
             .assign(to: &$selectedItemCount)
+    }
+    
+    @MainActor
+    func toggleSelectAll() {
+        let shouldSelectAll = selectedItemCount == 0
+        
+        selectedItemCount = 0
+        deletedDataAmount = 0
+        
+        for groupIndex in groupedVideoDuplicates.indices {
+            for itemIndex in groupedVideoDuplicates[groupIndex].indices {
+                let item = groupedVideoDuplicates[groupIndex][itemIndex]
+                
+                if item.isBest {
+                    groupedVideoDuplicates[groupIndex][itemIndex].isSelected = false
+                    continue
+                }
+                
+                groupedVideoDuplicates[groupIndex][itemIndex].isSelected = shouldSelectAll
+                if shouldSelectAll {
+                    selectedItemCount += 1
+                    deletedDataAmount += item.data
+                }
+            }
+        }
+        
+        objectWillChange.send()
     }
     
     @MainActor

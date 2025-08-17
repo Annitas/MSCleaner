@@ -24,7 +24,7 @@ struct VideosView: View {
                 Text("\(videos.count) videos (\(String(format: "%.2f", totalSizeGB)) GB)")
                 Spacer()
                 Button(viewModel.selectedItemCount == 0 ? "Select all" : "Deselect all") {
-//                    viewModel.toggleSelectAll()
+                    viewModel.toggleSelectAll()
                 }
             }
             .padding(16)
@@ -58,12 +58,11 @@ struct VideosView: View {
                                             .frame(width: 200, height: 200)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
-//                                                viewModel.toggleSelection(for: item)
+                                                viewModel.toggleSelection(for: item)
                                             }
                                             .cornerRadius(8)
                                             .shadow(radius: 3)
                                         
-                                        // Видео иконка + длительность
                                         VStack(alignment: .leading) {
                                             Spacer()
                                             HStack {
@@ -107,16 +106,16 @@ struct VideosView: View {
                 }
             }
             
-//            Button(action: {
-//                viewModel.deleteSelected()
-//            }) {
-//                Text("Delete \(viewModel.selectedItemCount) videos (\(viewModel.formattedDeletedDataAmount))")
-//                    .foregroundColor(.white)
-//                    .frame(maxWidth: .infinity, minHeight: 56)
-//                    .background(Color.blue)
-//                    .cornerRadius(8)
-//            }
-//            .padding(.horizontal)
+            Button(action: {
+                viewModel.deleteSelected()
+            }) {
+                Text("Delete \(viewModel.selectedItemCount) videos (\(viewModel.formattedDeletedDataAmount))")
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(Color.blue)
+                    .cornerRadius(8)
+            }
+            .padding(.horizontal)
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.groupedVideoDuplicates.count)
         .navigationTitle(title)
