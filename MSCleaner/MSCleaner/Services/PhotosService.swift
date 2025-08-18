@@ -14,6 +14,24 @@ enum MediaAlbumType {
     case similarPhotos
     case screenRecordings
     case videoDuplicates
+    
+    var albumSubtype: PHAssetCollectionSubtype {
+        switch self {
+        case .screenshots:      return .smartAlbumScreenshots
+        case .similarPhotos:    return .smartAlbumUserLibrary
+        case .screenRecordings: return .smartAlbumVideos
+        case .videoDuplicates:  return .smartAlbumVideos
+        }
+    }
+    
+    func process(service: PhotosService, assets: PHFetchResult<PHAsset>) {
+        switch self {
+        case .screenshots:      service.getScreenshots(assets: assets)
+        case .similarPhotos:    service.getPhotos(assets: assets)
+        case .screenRecordings: service.getScreenrecordings(assets: assets)
+        case .videoDuplicates:  service.getVideos(assets: assets)
+        }
+    }
 }
 
 final class PhotosService {
@@ -42,42 +60,14 @@ final class PhotosService {
     private func loadAssets() {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        let collection: PHAssetCollection?
-        var albumSubtype: PHAssetCollectionSubtype
-        
-        switch albumType {
-        case .screenshots:
-            albumSubtype = .smartAlbumScreenshots
-        case .similarPhotos:
-            albumSubtype = .smartAlbumUserLibrary
-        case .screenRecordings:
-            albumSubtype = .smartAlbumVideos
-        case .videoDuplicates:
-            albumSubtype = .smartAlbumVideos
-        }
-        
-        collection = PHAssetCollection.fetchAssetCollections(
+        let collection = PHAssetCollection.fetchAssetCollections(
             with: .smartAlbum,
-            subtype: albumSubtype,
+            subtype: albumType.albumSubtype,
             options: nil
         ).firstObject
-        
         guard let collection else { return }
         let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
-        let requestOptions = PHImageRequestOptions()
-        requestOptions.deliveryMode = .highQualityFormat
-        requestOptions.isSynchronous = false
-        
-        switch albumType {
-        case .screenshots:
-            getScreenshots(assets: assets)
-        case .similarPhotos:
-            getPhotos(assets: assets)
-        case .screenRecordings:
-            getScreenrecordings(assets: assets)
-        case .videoDuplicates:
-            getVideos(assets: assets)
-        }
+        albumType.process(service: self, assets: assets)
     }
     
     func getScreenshots(assets: PHFetchResult<PHAsset>) {
