@@ -147,14 +147,4 @@ final class PhotosService {
             }
         }
     }
-
-    private func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
-        guard let asset else { return 0 }
-        let resources = PHAssetResource.assetResources(for: asset)
-        guard let resource = resources.first else { return 0 }
-        if let fileSize = resource.value(forKey: "fileSize") as? Int64 {
-            return fileSize
-        }
-        return 0
-    }
 }

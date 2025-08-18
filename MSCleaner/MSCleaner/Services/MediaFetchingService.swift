@@ -117,13 +117,13 @@ final class MediaFetchingService {
                     requestImagesGroup.leave()
                 }
                 guard let image else { return }
-                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset)
+                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset, data: self.getSizeOfAsset(asset))
                 groupedByDate[dateKey, default: []].append(item)
             }
         }
         requestImagesGroup.notify(queue: .main) {
             completion(groupedByDate)
-            print("IMAGES COMPLETED")
+            print("SCREENSHOTS COMPLETED")
         }
     }
     
@@ -218,5 +218,15 @@ final class MediaFetchingService {
                 completion(0)
             }
         }
+    }
+    
+    private func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
+        guard let asset else { return 0 }
+        let resources = PHAssetResource.assetResources(for: asset)
+        guard let resource = resources.first else { return 0 }
+        if let fileSize = resource.value(forKey: "fileSize") as? Int64 {
+            return fileSize
+        }
+        return 0
     }
 }
