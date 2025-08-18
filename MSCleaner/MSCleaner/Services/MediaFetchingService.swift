@@ -35,7 +35,12 @@ final class MediaFetchingService {
             for asset in videoAssets {
                 group.addTask {
                     let duration = round(asset.duration)
-                    let fileSize: Int64 = 5 // TODO: посчитать реальный размер
+                    let fileSize: Int64 = await withCheckedContinuation { [weak self] continuation in
+                        self?.getVideoFileSize(for: asset) { size in
+                            continuation.resume(returning: size)
+                        }
+                    }
+                    print("filesize: \(fileSize)")
                     let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
                     let videoItem = VideoItem(images: frames, asset: asset, duration: duration, fileSize: fileSize)
@@ -184,6 +189,29 @@ final class MediaFetchingService {
                         continuation.resume(returning: images)
                     }
                 }
+            }
+        }
+    }
+    
+    func getVideoFileSize(for asset: PHAsset, completion: @escaping (Int64) -> Void) {
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = true
+        
+        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+            guard let urlAsset = avAsset as? AVURLAsset else {
+                completion(0)
+                return
+            }
+            do {
+                let values = try urlAsset.url.resourceValues(forKeys: [.fileSizeKey])
+                if let size = values.fileSize {
+                    completion(Int64(size))
+                } else {
+                    completion(0)
+                }
+            } catch {
+                print("Error reading file size: \(error)")
+                completion(0)
             }
         }
     }

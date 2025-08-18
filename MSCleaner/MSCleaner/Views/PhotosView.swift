@@ -8,7 +8,7 @@
 import SwiftUI
 import Photos
 
-struct ScreenshotsView: View {
+struct PhotosView: View {
     @State var title: String
     @StateObject var viewModel: PhotosViewModel
     

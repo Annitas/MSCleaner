@@ -59,7 +59,7 @@ struct PhotosAndVideosView: View {
     func destinationView(for itemName: String) -> some View {
         switch itemName {
         case "Screenshots":
-            ScreenshotsView(
+            PhotosView(
                 title: "Screenshots",
                 viewModel: viewModel.screenshotsVM
             )
@@ -69,7 +69,7 @@ struct PhotosAndVideosView: View {
                 viewModel: viewModel.screenRecordingsVM
             )
         case "Similar photos":
-            ScreenshotsView(
+            PhotosView(
                 title: "Similar photos",
                 viewModel: viewModel.similarPhotosVM
             )
