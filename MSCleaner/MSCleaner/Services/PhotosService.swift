@@ -51,9 +51,9 @@ final class PhotosService {
     }
     
     func fetchPhotos() {
-        PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
             guard status == .authorized || status == .limited else { return }
-            self.loadAssets()
+            self?.loadAssets()
         }
     }
     
