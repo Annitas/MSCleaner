@@ -77,7 +77,11 @@ final class MediaFetchingService {
             for asset in videoAssets {
                 group.addTask {
                     let duration = round(asset.duration)
-                    let fileSize: Int64 = 5 // TODO: посчитать реальный размер
+                    let fileSize: Int64 = await withCheckedContinuation { [weak self] continuation in
+                        self?.getVideoFileSize(for: asset) { size in
+                            continuation.resume(returning: size)
+                        }
+                    }
                     let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
                     let videoItem = VideoItem(images: frames, asset: asset, duration: duration, fileSize: fileSize)
