@@ -8,13 +8,20 @@
 import SwiftUI
 import Combine
 
+protocol DataCalculateable {
+    var dataAmount: Int64 { get set }
+}
+
 final class PhotosAndVideosViewModel: ObservableObject {
     @Published var screenshotsVM: PhotosViewModel
     @Published var similarPhotosVM: PhotosViewModel
     @Published var screenRecordingsVM: VideosViewModel
     @Published var similarVideosVM: VideosViewModel
-    @Published var screenshotsVMdataSize: Int64 = 0
-    @Published var similarPhotosVMdataSize: Int64 = 0
+    
+    @Published private(set) var screenshotsSize: String = ""
+    @Published private(set) var similarPhotosSize: String = ""
+    @Published private(set) var screenRecordingsSize: String = ""
+    @Published private(set) var similarVideosSize: String = ""
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -22,26 +29,25 @@ final class PhotosAndVideosViewModel: ObservableObject {
         let screenshotsService = PhotosService(albumType: .screenshots)
         let similarPhotosService = PhotosService(albumType: .similarPhotos)
         let screenRecordingsService = PhotosService(albumType: .screenRecordings)
-        let similarVideos = PhotosService(albumType: .videoDuplicates)
+        let similarVideosService = PhotosService(albumType: .videoDuplicates)
         
         self.screenshotsVM = PhotosViewModel(photoService: screenshotsService)
         self.similarPhotosVM = PhotosViewModel(photoService: similarPhotosService)
         self.screenRecordingsVM = VideosViewModel(photoService: screenRecordingsService)
-        self.similarVideosVM = VideosViewModel(photoService: similarVideos)
+        self.similarVideosVM = VideosViewModel(photoService: similarVideosService)
         
-        screenshotsVM.$dataAmount
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.similarPhotosVMdataSize, on: self)
-            .store(in: &cancellables)
-        
-        similarPhotosVM.$dataAmount
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.similarPhotosVMdataSize, on: self)
-            .store(in: &cancellables)
+        bindService(screenshotsService, to: \.screenshotsSize)
+        bindService(similarPhotosService, to: \.similarPhotosSize)
+        bindService(screenRecordingsService, to: \.screenRecordingsSize)
+        bindService(similarVideosService, to: \.similarVideosSize)
     }
     
-    var formattedDataSize: String {
-        ByteCountFormatter.string(fromByteCount: screenshotsVMdataSize, countStyle: .file)
+    private func bindService(_ service: PhotosService, to keyPath: ReferenceWritableKeyPath<PhotosAndVideosViewModel, String>) {
+        service.$assetSizes
+            .map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: keyPath, on: self)
+            .store(in: &cancellables)
     }
 }
 

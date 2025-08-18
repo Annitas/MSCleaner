@@ -13,6 +13,7 @@ final class VideosViewModel: ObservableObject {
     @Published private(set) var groupedVideoDuplicates: [[VideoItem]] = []
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
+    @Published var dataAmount: Int64 = 0
     
     private var cancellables = Set<AnyCancellable>()
     private let photoService: PhotosService

@@ -15,19 +15,19 @@ struct PhotosAndVideosView: View {
         [
             MediaTitle(
                 title: "Screenshots",
-                size: viewModel.formattedDataSize
+                size: viewModel.screenshotsSize
             ),
             MediaTitle(
                 title: "Screen recordings",
-                size: viewModel.formattedDataSize
+                size: viewModel.screenRecordingsSize
             ),
             MediaTitle(
                 title: "Similar photos",
-                size: viewModel.formattedDataSize
+                size: viewModel.similarPhotosSize
             ),
             MediaTitle(
                 title: "Video duplicates",
-                size: viewModel.formattedDataSize
+                size: viewModel.similarVideosSize
             ),
         ]
     }

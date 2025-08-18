@@ -40,7 +40,6 @@ final class MediaFetchingService {
                             continuation.resume(returning: size)
                         }
                     }
-                    print("filesize: \(fileSize)")
                     let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
                     let videoItem = VideoItem(images: frames, asset: asset, duration: duration, fileSize: fileSize)

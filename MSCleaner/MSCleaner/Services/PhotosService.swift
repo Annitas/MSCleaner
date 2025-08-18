@@ -16,13 +16,6 @@ enum MediaAlbumType {
     case videoDuplicates
 }
 
-struct AssetSize {
-    var screenshotSize: Int64 = 0
-    var screenRecordingsSize: Int64 = 0
-    var similarPhotosSize: Int64 = 0
-    var similarVideosSize: Int64 = 0
-}
-
 final class PhotosService {
     @Published var isLoading = false
     @Published var groupedDuplicatedPhotos: [[PhotoItem]] = []
@@ -90,6 +83,7 @@ final class PhotosService {
     func getScreenshots(assets: PHFetchResult<PHAsset>) {
         Task {
             groupedDuplicatedPhotos = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
+            assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
         }
     }
     
@@ -102,12 +96,14 @@ final class PhotosService {
     func getVideos(assets: PHFetchResult<PHAsset>) {
         Task {
             processDuplicatedVideos(for: await grouppedService.getGrouppedViedos(assets: assets))
+            assetSizes = grouppedDuplicatedVideos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
         }
     }
     
     func getScreenrecordings(assets: PHFetchResult<PHAsset>) {
         Task {
             grouppedDuplicatedVideos = await grouppedService.getScreenRecordings(assets: assets)
+            assetSizes = grouppedDuplicatedVideos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
         }
     }
     
@@ -124,8 +120,10 @@ final class PhotosService {
         for (_, items) in grouped {
             guard items.count > 1 else { continue }
             let operation = BlockOperation { [weak self] in
+                guard let self else { return }
                 let duplicates = PhotoDuplicateDetector().findDuplicates(in: items)
-                self?.groupedDuplicatedPhotos += duplicates
+                self.groupedDuplicatedPhotos += duplicates
+                self.assetSizes += duplicates.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
             }
             operationGroup.enter()
             operation.completionBlock = {
@@ -135,8 +133,9 @@ final class PhotosService {
         }
         
         operationGroup.notify(queue: .main) { [weak self] in
-            self?.isLoading = false
-            self?.sortGroupedDuplicates()
+            guard let self else { return }
+            self.isLoading = false
+            self.sortGroupedDuplicates()
         }
     }
 
