@@ -108,11 +108,20 @@ struct PhotosView: View {
             Button(action: {
                 viewModel.deleteSelected()
             }) {
-                Text("Delete \(viewModel.selectedItemCount) photos (\(viewModel.formattedDeletedDataAmount))")
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(Color.blue)
-                    .cornerRadius(8)
+                HStack(spacing: 8) {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(width: 20, height: 20)
+                            .padding(8)
+                    }
+                    
+                    Text("Delete \(viewModel.selectedItemCount) photos (\(viewModel.formattedDeletedDataAmount))")
+                        .foregroundColor(.white)
+                }
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .background(Color.blue)
+                .cornerRadius(8)
             }
             .padding(.horizontal)
         }

@@ -14,7 +14,8 @@ final class PhotosViewModel: ObservableObject {
     @Published var deletedDataAmount: Int64 = 0
     @Published private(set) var groupedPhotoDuplicates: [[PhotoItem]] = []
     @Published var dataAmount: Int64 = 0
-    
+    @Published private(set) var isLoading = false
+
     var formattedDeletedDataAmount: String {
         ByteCountFormatter.string(fromByteCount: deletedDataAmount, countStyle: .file)
     }
@@ -45,6 +46,11 @@ final class PhotosViewModel: ObservableObject {
         $groupedPhotoDuplicates
             .map { $0.flatMap { $0 }.filter { $0.isSelected }.count }
             .assign(to: &$selectedItemCount)
+        
+        photoService.$isLoading
+                    .receive(on: DispatchQueue.main)
+                    .assign(to: &$isLoading)
+
     }
     
     @MainActor

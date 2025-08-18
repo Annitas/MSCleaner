@@ -40,12 +40,8 @@ final class PhotosAndVideosViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    var formattedScreenshotsDataSize: String {
+    var formattedDataSize: String {
         ByteCountFormatter.string(fromByteCount: screenshotsVMdataSize, countStyle: .file)
-    }
-    
-    var formattedSimilarPhotosDataSize: String {
-        ByteCountFormatter.string(fromByteCount: similarPhotosVMdataSize, countStyle: .file)
     }
 }
 

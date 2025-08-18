@@ -24,6 +24,7 @@ struct AssetSize {
 }
 
 final class PhotosService {
+    @Published var isLoading = false
     @Published var groupedDuplicatedPhotos: [[PhotoItem]] = []
     @Published var grouppedDuplicatedVideos: [[VideoItem]] = []
     @Published var assetSizes: Int64 = 0
@@ -119,7 +120,7 @@ final class PhotosService {
     
     private func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
         let operationGroup = DispatchGroup()
-        
+        isLoading = true
         for (_, items) in grouped {
             guard items.count > 1 else { continue }
             let operation = BlockOperation { [weak self] in
@@ -134,6 +135,7 @@ final class PhotosService {
         }
         
         operationGroup.notify(queue: .main) { [weak self] in
+            self?.isLoading = false
             self?.sortGroupedDuplicates()
         }
     }

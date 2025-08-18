@@ -15,19 +15,19 @@ struct PhotosAndVideosView: View {
         [
             MediaTitle(
                 title: "Screenshots",
-                size: viewModel.formattedScreenshotsDataSize
+                size: viewModel.formattedDataSize
             ),
             MediaTitle(
                 title: "Screen recordings",
-                size: "2.2 GB" // TODO: Заменить на динамическое значение
+                size: viewModel.formattedDataSize
             ),
             MediaTitle(
                 title: "Similar photos",
-                size: viewModel.formattedSimilarPhotosDataSize
+                size: viewModel.formattedDataSize
             ),
             MediaTitle(
                 title: "Video duplicates",
-                size: "2.2 GB" // TODO: Заменить на динамическое значение
+                size: viewModel.formattedDataSize
             ),
         ]
     }
