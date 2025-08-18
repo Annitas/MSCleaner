@@ -42,7 +42,7 @@ final class MediaFetchingService {
                     }
                     let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
-                    let videoItem = VideoItem(images: frames, asset: asset, duration: duration, fileSize: fileSize)
+                    let videoItem = VideoItem(images: frames, asset: asset, data: fileSize, duration: duration)
                     return (videoItem)
                 }
             }
@@ -83,7 +83,7 @@ final class MediaFetchingService {
                     }
                     let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
-                    let videoItem = VideoItem(images: frames, asset: asset, duration: duration, fileSize: fileSize)
+                    let videoItem = VideoItem(images: frames, asset: asset, data: fileSize, duration: duration)
                     return (duration, videoItem)
                 }
             }

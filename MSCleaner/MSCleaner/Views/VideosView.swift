@@ -14,7 +14,7 @@ struct VideosView: View {
     
     var body: some View {
         let videos = viewModel.groupedVideoDuplicates.flatMap { $0 }
-        let totalSizeGB = Double(videos.reduce(0) { $0 + $1.fileSize }) / (1024 * 1024 * 1000)
+        let totalSizeGB = Double(videos.reduce(0) { $0 + $1.data }) / (1024 * 1024 * 1000)
         
         VStack {
             HStack {

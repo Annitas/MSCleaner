@@ -28,7 +28,7 @@ final class PhotosService {
     
     init(albumType: MediaAlbumType) {
         self.albumType = albumType
-        processingQueue.maxConcurrentOperationCount = 2
+        processingQueue.maxConcurrentOperationCount = 3
         fetchPhotos()
     }
     

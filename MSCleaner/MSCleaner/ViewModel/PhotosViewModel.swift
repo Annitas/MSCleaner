@@ -12,10 +12,10 @@ import Combine
 final class PhotosViewModel: ObservableObject {
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
-    @Published private(set) var groupedPhotoDuplicates: [[PhotoItem]] = []
     @Published var dataAmount: Int64 = 0
     @Published private(set) var isLoading = false
-
+    @Published private(set) var groupedPhotoDuplicates: [[PhotoItem]] = []
+    
     var formattedDeletedDataAmount: String {
         ByteCountFormatter.string(fromByteCount: deletedDataAmount, countStyle: .file)
     }
