@@ -13,11 +13,22 @@ final class MediaFetchingService {
     private let imageManager = PHCachingImageManager()
     
     func getScreenshots(assets: PHFetchResult<PHAsset>) async -> [Date: [PhotoItem]] {
-        await withCheckedContinuation { continuation in
-            getScreenshots(assets: assets) { result in
-                continuation.resume(returning: result)
+        let requestOptions = PHImageRequestOptions()
+        requestOptions.deliveryMode = .highQualityFormat
+        requestOptions.isSynchronous = false
+        var groupedByDate: [Date: [PhotoItem]] = [:]
+        let dateKey = Date()
+        for i in 0 ..< assets.count {
+            let asset = assets.object(at: i)
+            guard let creationDate = asset.creationDate else { continue }
+            if let image = await imageManager.requestUIImage(for: asset,
+                                                             targetSize: CGSize(width: 300, height: 300),
+                                                             options: requestOptions) {
+                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset, data: self.getSizeOfAsset(asset))
+                groupedByDate[dateKey, default: []].append(item)
             }
         }
+        return groupedByDate
     }
     
     func getScreenRecordings(assets: PHFetchResult<PHAsset>) async -> [[VideoItem]] {
@@ -110,34 +121,6 @@ final class MediaFetchingService {
         
         print("VIDEO GROUPING COMPLETED")
         return groupedByDuration
-    }
-    
-    private func getScreenshots(assets: PHFetchResult<PHAsset>,
-                                completion: @escaping ([Date: [PhotoItem]]) -> Void) {
-        let requestOptions = PHImageRequestOptions()
-        requestOptions.deliveryMode = .highQualityFormat
-        requestOptions.isSynchronous = false
-        var groupedByDate: [Date: [PhotoItem]] = [:]
-        let requestImagesGroup = DispatchGroup()
-        let dateKey = Date()
-        assets.enumerateObjects { [weak self] asset, number, _  in
-            guard let self = self, let creationDate = asset.creationDate else { return }
-            requestImagesGroup.enter()
-            self.imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 300),
-                                           contentMode: .aspectFill,
-                                           options: requestOptions) { image, _ in
-                defer {
-                    requestImagesGroup.leave()
-                }
-                guard let image else { return }
-                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset, data: self.getSizeOfAsset(asset))
-                groupedByDate[dateKey, default: []].append(item)
-            }
-        }
-        requestImagesGroup.notify(queue: .main) {
-            completion(groupedByDate)
-            print("SCREENSHOTS COMPLETED")
-        }
     }
     
     private func requestPreviewFrames(for asset: PHAsset, targetSize: CGSize) async -> [UIImage] {
