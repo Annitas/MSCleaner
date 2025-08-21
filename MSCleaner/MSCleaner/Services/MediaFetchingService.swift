@@ -28,12 +28,14 @@ final class MediaFetchingService {
                 groupedByDate[dateKey, default: []].append(item)
             }
         }
+        print("SCREENSHOTS COMPLETED")
         return groupedByDate
     }
     
     func getScreenRecordings(assets: PHFetchResult<PHAsset>) async -> [[VideoItem]] {
         var groupedByDuration: [VideoItem] = []
         var videoAssets: [PHAsset] = []
+        
         assets.enumerateObjects { asset, _, _ in
             guard asset.mediaType == .video else { return }
             let resources = PHAssetResource.assetResources(for: asset)
@@ -42,27 +44,29 @@ final class MediaFetchingService {
                 videoAssets.append(asset)
             }
         }
-        await withTaskGroup(of: (VideoItem)?.self) { group in
+        
+        await withTaskGroup(of: VideoItem?.self) { group in
             for asset in videoAssets {
-                group.addTask {
+                group.addTask { [self] in
                     let duration = round(asset.duration)
-                    let fileSize: Int64 = await withCheckedContinuation { [weak self] continuation in
-                        self?.getVideoFileSize(for: asset) { size in
-                            continuation.resume(returning: size)
-                        }
-                    }
-                    let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
+                    let fileSize = await getVideoFileSize(for: asset)
+                    let frames = await requestPreviewFrames(for: asset,
+                                                            targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
-                    let videoItem = VideoItem(images: frames, asset: asset, data: fileSize, duration: duration)
-                    return (videoItem)
+                    return VideoItem(images: frames,
+                                     asset: asset,
+                                     data: fileSize,
+                                     duration: duration)
                 }
             }
+            
             for await result in group {
                 if let videoItem = result {
                     groupedByDuration.append(videoItem)
                 }
             }
         }
+        print("SCREENRECORDINGS COMPLETED")
         return [groupedByDuration]
     }
     
@@ -85,10 +89,11 @@ final class MediaFetchingService {
                 groupedByDate[dateKey, default: []].append(item)
             }
         }
+        print("PHOTOS COMPLETED")
         return groupedByDate
     }
     
-    func getGrouppedViedos(assets: PHFetchResult<PHAsset>) async -> [TimeInterval: [VideoItem]] {
+    func getGroupedVideos(assets: PHFetchResult<PHAsset>) async -> [TimeInterval: [VideoItem]] {
         var groupedByDuration: [TimeInterval: [VideoItem]] = [:]
         var videoAssets: [PHAsset] = []
         assets.enumerateObjects { asset, _, _ in
@@ -96,22 +101,22 @@ final class MediaFetchingService {
                 videoAssets.append(asset)
             }
         }
-        
         await withTaskGroup(of: (TimeInterval, VideoItem)?.self) { group in
             for asset in videoAssets {
-                group.addTask {
+                group.addTask { [self] in
                     let duration = round(asset.duration)
-                    let fileSize: Int64 = await withCheckedContinuation { [weak self] continuation in
-                        self?.getVideoFileSize(for: asset) { size in
-                            continuation.resume(returning: size)
-                        }
-                    }
-                    let frames = await self.requestPreviewFrames(for: asset, targetSize: CGSize(width: 300, height: 300))
+                    let fileSize = await getVideoFileSize(for: asset)
+                    let frames = await requestPreviewFrames(for: asset,
+                                                            targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
-                    let videoItem = VideoItem(images: frames, asset: asset, data: fileSize, duration: duration)
+                    let videoItem = VideoItem(images: frames,
+                                              asset: asset,
+                                              data: fileSize,
+                                              duration: duration)
                     return (duration, videoItem)
                 }
             }
+            
             for await result in group {
                 if let (duration, videoItem) = result {
                     groupedByDuration[duration, default: []].append(videoItem)
@@ -119,7 +124,7 @@ final class MediaFetchingService {
             }
         }
         
-        print("VIDEO GROUPING COMPLETED")
+        print("VIDEOS COMPLETED")
         return groupedByDuration
     }
     
@@ -162,27 +167,22 @@ final class MediaFetchingService {
         }
     }
     
-    func getVideoFileSize(for asset: PHAsset, completion: @escaping (Int64) -> Void) {
+    func getVideoFileSize(for asset: PHAsset) async -> Int64 {
         let options = PHVideoRequestOptions()
         options.isNetworkAccessAllowed = true
-        
-        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
-            guard let urlAsset = avAsset as? AVURLAsset else {
-                completion(0)
-                return
-            }
-            do {
-                let values = try urlAsset.url.resourceValues(forKeys: [.fileSizeKey])
-                if let size = values.fileSize {
-                    completion(Int64(size))
-                } else {
-                    completion(0)
-                }
-            } catch {
-                print("Error reading file size: \(error)")
-                completion(0)
-            }
+        guard let avAsset = await PHImageManager.default().requestAVAssetAsync(forVideo: asset, options: options),
+              let urlAsset = avAsset as? AVURLAsset else {
+            return 0
         }
+        do {
+            let values = try urlAsset.url.resourceValues(forKeys: [.fileSizeKey])
+            if let size = values.fileSize {
+                return Int64(size)
+            }
+        } catch {
+            print("Error reading file size: \(error)")
+        }
+        return 0
     }
     
     private func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
@@ -207,6 +207,15 @@ extension PHImageManager {
                               contentMode: contentMode,
                               options: options) { image, _ in
                 continuation.resume(returning: image)
+            }
+        }
+    }
+    
+    func requestAVAssetAsync(forVideo asset: PHAsset,
+                             options: PHVideoRequestOptions? = nil) async -> AVAsset? {
+        await withCheckedContinuation { continuation in
+            self.requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+                continuation.resume(returning: avAsset)
             }
         }
     }

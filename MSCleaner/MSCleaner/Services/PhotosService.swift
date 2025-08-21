@@ -85,7 +85,7 @@ final class PhotosService {
     
     func getVideos(assets: PHFetchResult<PHAsset>) {
         Task {
-            processDuplicatedVideos(for: await grouppedService.getGrouppedViedos(assets: assets))
+            processDuplicatedVideos(for: await grouppedService.getGroupedVideos(assets: assets))
             assetSizes = grouppedDuplicatedVideos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
         }
     }
@@ -128,7 +128,7 @@ final class PhotosService {
             self.sortGroupedDuplicates()
         }
     }
-
+    
     private func sortGroupedDuplicates() {
         DispatchQueue.main.async { [weak self] in
             self?.groupedDuplicatedPhotos.sort { group1, group2 in
