@@ -79,7 +79,7 @@ final class PhotosService {
     
     func getPhotos(assets: PHFetchResult<PHAsset>) {
         Task {
-            self.processDuplicatedPhotosAsync(from: await grouppedService.getGrouppedPhotos(assets: assets))
+            self.processDuplicatedPhotosAsync(from: await grouppedService.getGroupedPhotos(assets: assets))
         }
     }
     
