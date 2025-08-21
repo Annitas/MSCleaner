@@ -107,13 +107,16 @@ final class PhotosService {
     private func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
         let operationGroup = DispatchGroup()
         isLoading = true
+        let duplicatesDetector = PhotoDuplicateDetector()
         for (_, items) in grouped {
             guard items.count > 1 else { continue }
             let operation = BlockOperation { [weak self] in
-                guard let self else { return }
-                let duplicates = PhotoDuplicateDetector().findDuplicates(in: items)
-                self.groupedDuplicatedPhotos += duplicates
-                self.assetSizes += duplicates.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
+                autoreleasepool {
+                    guard let self else { return }
+                    let duplicates = duplicatesDetector.findDuplicates(in: items)
+                    self.groupedDuplicatedPhotos += duplicates
+                    self.assetSizes += duplicates.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
+                }
             }
             operationGroup.enter()
             operation.completionBlock = {

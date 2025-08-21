@@ -24,7 +24,7 @@ final class MediaFetchingService {
             if let image = await imageManager.requestUIImage(for: asset,
                                                              targetSize: CGSize(width: 300, height: 300),
                                                              options: requestOptions) {
-                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset, data: self.getSizeOfAsset(asset))
+                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset, data: getSizeOfAsset(asset))
                 groupedByDate[dateKey, default: []].append(item)
             }
         }
@@ -133,6 +133,7 @@ final class MediaFetchingService {
             let options = PHVideoRequestOptions()
             options.version = .current
             options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = true
             
             PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
                 guard let avAsset = avAsset else {
@@ -202,10 +203,7 @@ extension PHImageManager {
                         contentMode: PHImageContentMode = .aspectFill,
                         options: PHImageRequestOptions? = nil) async -> UIImage? {
         await withCheckedContinuation { continuation in
-            var resumed = false
-            self.requestImage( for: asset, targetSize: targetSize, contentMode: contentMode, options: options) { image, _ in
-                guard !resumed else { return }
-                resumed = true
+            self.requestImage(for: asset, targetSize: targetSize, contentMode: contentMode, options: options) { image, _ in
                 continuation.resume(returning: image)
             }
         }

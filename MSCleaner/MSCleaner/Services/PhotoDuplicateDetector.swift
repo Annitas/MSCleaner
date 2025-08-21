@@ -51,26 +51,28 @@ final class PhotoDuplicateDetector {
         return distance <= 0.2
     }
     
+    private let visionQueue = DispatchQueue(label: "vision.feature.queue")
+    
     private func featurePrintForImage(image: UIImage, cacheKey: String) -> VNFeaturePrintObservation? {
         if let cached = Self.sharedFeatureCache.object(forKey: cacheKey as NSString) {
             return cached
         }
         
-        guard let cgImage = image.cgImage else { return nil }
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        let request = VNGenerateImageFeaturePrintRequest()
-        
-        do {
-            try handler.perform([request])
-            if let result = request.results?.first as? VNFeaturePrintObservation {
-                Self.sharedFeatureCache.setObject(result, forKey: cacheKey as NSString)
-                return result
+        return visionQueue.sync {
+            guard let cgImage = image.cgImage?.copy() else { return nil }
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            let request = VNGenerateImageFeaturePrintRequest()
+            do {
+                try handler.perform([request])
+                if let result = request.results?.first as? VNFeaturePrintObservation {
+                    Self.sharedFeatureCache.setObject(result, forKey: cacheKey as NSString)
+                    return result
+                }
+            } catch {
+                print("!!! Error featurePrintForImage: \(error)")
             }
-        } catch {
-            print("!!! Error featurePrintForImage: \(error)")
+            return nil
         }
-        
-        return nil
     }
     
     private func markBest(in group: [PhotoItem]) -> [PhotoItem] {
