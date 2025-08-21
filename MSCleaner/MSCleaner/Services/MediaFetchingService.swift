@@ -202,10 +202,10 @@ extension PHImageManager {
                         contentMode: PHImageContentMode = .aspectFill,
                         options: PHImageRequestOptions? = nil) async -> UIImage? {
         await withCheckedContinuation { continuation in
-            self.requestImage(for: asset,
-                              targetSize: targetSize,
-                              contentMode: contentMode,
-                              options: options) { image, _ in
+            var resumed = false
+            self.requestImage( for: asset, targetSize: targetSize, contentMode: contentMode, options: options) { image, _ in
+                guard !resumed else { return }
+                resumed = true
                 continuation.resume(returning: image)
             }
         }
