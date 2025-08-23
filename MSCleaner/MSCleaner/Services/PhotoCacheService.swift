@@ -28,10 +28,10 @@ final class PhotosCacheService {
         }
     }
     
-    func appendSimilarPhotos(_ newItems: [CachedPhotoItem]) {
-        var current = loadSimilarPhotos() ?? CachedSimilarPhotos(models: [])
-        current.items.append(newItems)
-        saveSimilarPhotos(current)
+    func appendSimilarPhotos(_ newItems: CachedSimilarPhotos) {
+        var newCache = newItems.items
+        newCache += loadSimilarPhotos()?.items ?? []
+        saveSimilarPhotos(CachedSimilarPhotos(items: newCache, latestPhotoDate: newItems.latestPhotoDate))
     }
     
     func loadSimilarPhotos() -> CachedSimilarPhotos? {

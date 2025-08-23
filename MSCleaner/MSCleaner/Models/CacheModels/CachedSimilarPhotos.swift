@@ -12,6 +12,11 @@ struct CachedSimilarPhotos: Codable {
     var items: [[CachedPhotoItem]]
     let latestPhotoDate: Date
     
+    init(items: [[CachedPhotoItem]], latestPhotoDate: Date) {
+        self.items = items
+        self.latestPhotoDate = latestPhotoDate
+    }
+    
     init(models: [[PhotoItem]]) {
         self.items = models.map { group in
             group.map { CachedPhotoItem(model: $0) }

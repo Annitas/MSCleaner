@@ -56,20 +56,7 @@ final class PhotosService {
             self?.loadAssets()
         }
     }
-    
-//    private func loadModelsFromCache() {
-//        let models = cacheService.loadSimilarPhotos()
-//        if models != nil {
-//            let newestCacheDate = models!.latestPhotoDate
-//            let latestAssetDate = fetchLatestPhotoAsset()!.creationDate!
-//            
-//            if newestCacheDate < latestAssetDate {
-//                
-//            }
-//            
-//        }
-//    }
-    
+
     private func loadAssets() {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
@@ -103,15 +90,25 @@ final class PhotosService {
 //                        guard let creationDate = asset.creationDate else { return false }
 //                        return creationDate > cached.latestPhotoDate
 //                    }
-                
+                let fetchOptions = PHFetchOptions()
+                fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                fetchOptions.predicate = NSPredicate(format: "creationDate > %@", cached.latestPhotoDate as NSDate)
+                let collection = PHAssetCollection.fetchAssetCollections(
+                    with: .smartAlbum,
+                    subtype: albumType.albumSubtype,
+                    options: nil
+                ).firstObject
+                guard let collection else { return }
+                let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
                 let freshGroups = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
                 groupedDuplicatedPhotos = freshGroups
-                
+                groupedDuplicatedPhotos[0] += cached.items.flatMap { group in
+                    group.compactMap { $0.toPhotoItem() }
+                }
                 // сохраняем в кеш обновлённый список
-                let newCache = CachedSimilarPhotos(models: groupedDuplicatedPhotos)
-                cacheService.saveSimilarPhotos(newCache)
+                let newCache = CachedSimilarPhotos(models: freshGroups)
+                cacheService.appendSimilarPhotos(newCache)
                 assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
-                
             } else {
                 // ❌ Кеша нет → берём всё из галереи
                 groupedDuplicatedPhotos = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
