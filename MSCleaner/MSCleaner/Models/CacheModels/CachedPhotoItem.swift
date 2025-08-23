@@ -9,12 +9,17 @@ import Foundation
 
 struct CachedPhotoItem: Codable, Identifiable {
     let id: UUID
-    let previewImageData: Data   // уменьшенное превью (JPEG/PNG Data)
+    let localIdentifier: String
+    let previewImageData: Data?
     let date: Date
     let sizeInBytes: Int64
+    
+    init(model: PhotoItem) {
+        self.id = model.id
+        self.localIdentifier = model.asset.localIdentifier
+        self.previewImageData = model.image.pngData()
+        self.date = model.creationDate
+        self.sizeInBytes = model.data
+    }
 }
 
-struct CachedSimilarPhotos: Codable {
-    let items: [[CachedPhotoItem]] // сгруппированные дубликаты
-    let latestPhotoDate: Date      // дата самой свежей фотографии
-}

@@ -39,7 +39,7 @@ final class PhotosService {
     @Published var groupedDuplicatedPhotos: [[PhotoItem]] = []
     @Published var grouppedDuplicatedVideos: [[VideoItem]] = []
     @Published var assetSizes: Int64 = 0
-    
+    private let cacheService = PhotosCacheService()
     private let grouppedService = MediaFetchingService()
     private let albumType: MediaAlbumType
     private let processingQueue = OperationQueue()
@@ -57,6 +57,19 @@ final class PhotosService {
         }
     }
     
+//    private func loadModelsFromCache() {
+//        let models = cacheService.loadSimilarPhotos()
+//        if models != nil {
+//            let newestCacheDate = models!.latestPhotoDate
+//            let latestAssetDate = fetchLatestPhotoAsset()!.creationDate!
+//            
+//            if newestCacheDate < latestAssetDate {
+//                
+//            }
+//            
+//        }
+//    }
+    
     private func loadAssets() {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
@@ -72,11 +85,57 @@ final class PhotosService {
     
     func getScreenshots(assets: PHFetchResult<PHAsset>) {
         Task {
-            groupedDuplicatedPhotos = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
-            assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
+            let latestAssetDate = assets.firstObject?.creationDate ?? Date.distantPast
+            if let cached = cacheService.loadSimilarPhotos() {
+                if cached.latestPhotoDate == latestAssetDate {
+                    // ✅ Кеш актуален → используем его
+                    groupedDuplicatedPhotos = cached.items.map { group in
+                        group.compactMap { $0.toPhotoItem() }
+                    }
+                    assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+                    return
+                }
+                
+                // 📌 Кеш есть, но устарел → нужно подгрузить новые фото
+//                let newAssets = (0 ..< assets.count)
+//                    .map { assets.object(at: $0) }
+//                    .filter { asset in
+//                        guard let creationDate = asset.creationDate else { return false }
+//                        return creationDate > cached.latestPhotoDate
+//                    }
+                
+                let freshGroups = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
+                groupedDuplicatedPhotos = freshGroups
+                
+                // сохраняем в кеш обновлённый список
+                let newCache = CachedSimilarPhotos(models: groupedDuplicatedPhotos)
+                cacheService.saveSimilarPhotos(newCache)
+                assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+                
+            } else {
+                // ❌ Кеша нет → берём всё из галереи
+                groupedDuplicatedPhotos = await grouppedService.getScreenshots(assets: assets).values.compactMap { $0 }
+                let newCache = CachedSimilarPhotos(models: groupedDuplicatedPhotos)
+                cacheService.saveSimilarPhotos(newCache)
+                assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+            }
         }
     }
-    
+
+    func fetchLatestPhotoAsset() -> PHAsset? {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        fetchOptions.fetchLimit = 1
+        let collection = PHAssetCollection.fetchAssetCollections(
+            with: .smartAlbum,
+            subtype: albumType.albumSubtype,
+            options: nil
+        ).firstObject
+        guard let collection else { return nil }
+        let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
+        return assets.firstObject
+    }
+
     func getPhotos(assets: PHFetchResult<PHAsset>) {
         Task {
             self.processDuplicatedPhotosAsync(from: await grouppedService.getGroupedPhotos(assets: assets))

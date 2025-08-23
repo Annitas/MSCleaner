@@ -10,7 +10,7 @@ import Foundation
 final class PhotosCacheService {
     private let fileManager = FileManager.default
     private let documentsURL: URL
-    private let fileName = "cleanerCaches.json"
+    private let fileName = "cleanerScreenshotCaches.json"
     
     init() {
         documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -26,6 +26,12 @@ final class PhotosCacheService {
         } catch {
             print("Error in saveSimilarPhotos \(error.localizedDescription)")
         }
+    }
+    
+    func appendSimilarPhotos(_ newItems: [CachedPhotoItem]) {
+        var current = loadSimilarPhotos() ?? CachedSimilarPhotos(models: [])
+        current.items.append(newItems)
+        saveSimilarPhotos(current)
     }
     
     func loadSimilarPhotos() -> CachedSimilarPhotos? {
