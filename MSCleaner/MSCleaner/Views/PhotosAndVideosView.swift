@@ -28,7 +28,7 @@ struct PhotosAndVideosView: View {
             MediaTitle(
                 title: "Video duplicates",
                 size: viewModel.similarVideosSize
-            ),
+            )
         ]
     }
     

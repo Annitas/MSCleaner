@@ -28,21 +28,29 @@ final class PhotosAndVideosViewModel: ObservableObject {
     init() {
         let screenshotsService = PhotosService(albumType: .screenshots)
         let similarPhotosService = PhotosService(albumType: .similarPhotos)
-        let screenRecordingsService = PhotosService(albumType: .screenRecordings)
-        let similarVideosService = PhotosService(albumType: .videoDuplicates)
+        let screenRecordingsService = VideoService(albumType: .screenRecordings)
+        let similarVideosService = VideoService(albumType: .videoDuplicates)
         
         self.screenshotsVM = PhotosViewModel(photoService: screenshotsService)
         self.similarPhotosVM = PhotosViewModel(photoService: similarPhotosService)
         self.screenRecordingsVM = VideosViewModel(photoService: screenRecordingsService)
         self.similarVideosVM = VideosViewModel(photoService: similarVideosService)
         
-        bindService(screenshotsService, to: \.screenshotsSize)
-        bindService(similarPhotosService, to: \.similarPhotosSize)
-        bindService(screenRecordingsService, to: \.screenRecordingsSize)
-        bindService(similarVideosService, to: \.similarVideosSize)
+        bindPhotoService(screenshotsService, to: \.screenshotsSize)
+        bindPhotoService(similarPhotosService, to: \.similarPhotosSize)
+        bindVideoService(screenRecordingsService, to: \.screenRecordingsSize)
+        bindVideoService(similarVideosService, to: \.similarVideosSize)
     }
     
-    private func bindService(_ service: PhotosService, to keyPath: ReferenceWritableKeyPath<PhotosAndVideosViewModel, String>) {
+    private func bindPhotoService(_ service: PhotosService, to keyPath: ReferenceWritableKeyPath<PhotosAndVideosViewModel, String>) {
+        service.$assetSizes
+            .map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) }
+            .receive(on: DispatchQueue.main)
+            .assign(to: keyPath, on: self)
+            .store(in: &cancellables)
+    }
+    
+    private func bindVideoService(_ service: VideoService, to keyPath: ReferenceWritableKeyPath<PhotosAndVideosViewModel, String>) {
         service.$assetSizes
             .map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) }
             .receive(on: DispatchQueue.main)

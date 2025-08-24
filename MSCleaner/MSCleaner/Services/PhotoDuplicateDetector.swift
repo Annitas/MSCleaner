@@ -31,7 +31,7 @@ final class PhotoDuplicateDetector {
             
             if group.count > 1 {
                 let groupWithBest = markBest(in: group)
-                groups.append(setSizes(in: groupWithBest))
+                groups.append(groupWithBest)
             }
         }
         return groups
@@ -40,8 +40,9 @@ final class PhotoDuplicateDetector {
     private func isSimilarPhotos(firstItem: PhotoItem, secondItem: PhotoItem) -> Bool {
         var distance: Float = 0
         do {
-            if let fp1 = featurePrintForImage(image: firstItem.image, cacheKey: firstItem.asset.localIdentifier),
-               let fp2 = featurePrintForImage(image: secondItem.image, cacheKey: secondItem.asset.localIdentifier) {
+            guard let firstImage = firstItem.image, let secondImage = secondItem.image else { return false }
+            if let fp1 = featurePrintForImage(image: firstImage, cacheKey: firstItem.localIdentifier),
+               let fp2 = featurePrintForImage(image: secondImage, cacheKey: secondItem.localIdentifier) {
                 try fp1.computeDistance(&distance, to: fp2)
             }
         } catch {
@@ -82,14 +83,14 @@ final class PhotoDuplicateDetector {
         return updated
     }
     
-    private func setSizes(in group: [PhotoItem]) -> [PhotoItem] {
-        let assetSize = getSizeOfAsset(group.first?.asset)
-        return group.map { item in
-            var copy = item
-            copy.data = assetSize
-            return copy
-        }
-    }
+//    private func setSizes(in group: [PhotoItem]) -> [PhotoItem] {
+//        let assetSize = getSizeOfAsset(group.first?.asset)
+//        return group.map { item in
+//            var copy = item
+//            copy.data = assetSize
+//            return copy
+//        }
+//    }
     
     private func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
         guard let asset else { return 0 }

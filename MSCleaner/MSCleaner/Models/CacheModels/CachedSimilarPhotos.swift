@@ -8,36 +8,22 @@
 import SwiftUI
 import Photos
 
-struct CachedSimilarPhotos: Codable {
-    var items: [[CachedPhotoItem]]
+protocol CacheMergeable {
+    func merged(with other: Self) -> Self
+}
+
+struct CachedSimilarPhotos: Codable, CacheMergeable {
+    var items: [[PhotoItem]]
     let latestPhotoDate: Date
     
-    init(items: [[CachedPhotoItem]], latestPhotoDate: Date) {
+    init(items: [[PhotoItem]], latestPhotoDate: Date) {
         self.items = items
         self.latestPhotoDate = latestPhotoDate
     }
     
-    init(models: [[PhotoItem]]) {
-        self.items = models.map { group in
-            group.map { CachedPhotoItem(model: $0) }
-        }
-        let allDates = models.flatMap { $0 }.map { $0.creationDate }
-        self.latestPhotoDate = allDates.max() ?? Date.distantPast
-    }
-}
-
-extension CachedPhotoItem {
-    func toPhotoItem() -> PhotoItem? {
-        let assets = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
-        guard let asset = assets.firstObject else { return nil }
-        let uiImage = previewImageData.flatMap { UIImage(data: $0) } ?? UIImage()
-        return PhotoItem(
-            image: uiImage,
-            creationDate: date,
-            asset: asset, // TODO: remove asset, use local identifier instead
-            data: sizeInBytes,
-            isSelected: true,
-            isBest: false
-        )
+    func merged(with other: CachedSimilarPhotos) -> CachedSimilarPhotos {
+        let combined = (items + other.items)
+        let latest = max(latestPhotoDate, other.latestPhotoDate)
+        return CachedSimilarPhotos(items: combined, latestPhotoDate: latest)
     }
 }

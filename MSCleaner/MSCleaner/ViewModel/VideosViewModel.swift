@@ -16,13 +16,13 @@ final class VideosViewModel: ObservableObject {
     @Published var dataAmount: Int64 = 0
     
     private var cancellables = Set<AnyCancellable>()
-    private let photoService: PhotosService
+    private let photoService: VideoService
     
     var formattedDeletedDataAmount: String {
         ByteCountFormatter.string(fromByteCount: deletedDataAmount, countStyle: .file)
     }
     
-    init(photoService: PhotosService) {
+    init(photoService: VideoService) {
         self.photoService = photoService
         
         photoService.$grouppedDuplicatedVideos

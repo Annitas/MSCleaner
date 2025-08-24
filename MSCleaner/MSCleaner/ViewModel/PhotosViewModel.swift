@@ -88,7 +88,7 @@ final class PhotosViewModel: ObservableObject {
         var assetsToDelete: [PHAsset] = []
         for group in groupedPhotoDuplicates {
             for item in group where item.isSelected {
-                assetsToDelete.append(item.asset)
+//                assetsToDelete.append(item.asset)
             }
         }
         
@@ -115,10 +115,10 @@ final class PhotosViewModel: ObservableObject {
         var filteredGroups: [[PhotoItem]] = []
         
         for group in groupedPhotoDuplicates {
-            let filteredGroup = group.filter { !deletedAssets.contains($0.asset) }
-            if !filteredGroup.isEmpty {
-                filteredGroups.append(filteredGroup)
-            }
+//            let filteredGroup = group.filter { !deletedAssets.contains($0.asset) }
+//            if !filteredGroup.isEmpty {
+//                filteredGroups.append(filteredGroup)
+//            }
         }
         
         groupedPhotoDuplicates = filteredGroups

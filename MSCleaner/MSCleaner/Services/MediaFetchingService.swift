@@ -12,11 +12,11 @@ final class MediaFetchingService {
     private let calendar = Calendar.current
     private let imageManager = PHCachingImageManager()
     
-    func getScreenshots(assets: PHFetchResult<PHAsset>) async -> [Date: [PhotoItem]] {
+    func getScreenshots(assets: PHFetchResult<PHAsset>) async -> [PhotoItem] {
         let requestOptions = PHImageRequestOptions()
         requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isSynchronous = false
-        var groupedByDate: [Date: [PhotoItem]] = [:]
+        var groupedByDate: [PhotoItem] = []
         let dateKey = Date()
         for i in 0 ..< assets.count {
             let asset = assets.object(at: i)
@@ -24,8 +24,8 @@ final class MediaFetchingService {
             if let image = await imageManager.requestUIImage(for: asset,
                                                              targetSize: CGSize(width: 300, height: 300),
                                                              options: requestOptions) {
-                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset, data: getSizeOfAsset(asset))
-                groupedByDate[dateKey, default: []].append(item)
+                let item = PhotoItem(localIdentifier: asset.localIdentifier, imageData: image, creationDate: creationDate, data: getSizeOfAsset(asset))
+                groupedByDate.append(item)
             }
         }
         print("SCREENSHOTS COMPLETED")
@@ -85,7 +85,7 @@ final class MediaFetchingService {
             if let image = await imageManager.requestUIImage(for: asset,
                                                              targetSize: CGSize(width: 300, height: 300),
                                                              options: requestOptions) {
-                let item = PhotoItem(image: image, creationDate: creationDate, asset: asset)
+                let item = PhotoItem(localIdentifier: asset.localIdentifier, imageData: image, creationDate: creationDate, data: getSizeOfAsset(asset))
                 groupedByDate[dateKey, default: []].append(item)
             }
         }
