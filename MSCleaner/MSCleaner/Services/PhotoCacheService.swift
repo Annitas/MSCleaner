@@ -30,6 +30,7 @@ final class PhotosCacheService {
         let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
         do {
             let data = try Data(contentsOf: fileURL)
+            print("loaded cache for \(type)")
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
             print("Error loading cache for \(type): \(error.localizedDescription)")
