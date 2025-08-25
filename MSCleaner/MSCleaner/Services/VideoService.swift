@@ -92,6 +92,18 @@ final class VideoService {
         ).firstObject
         guard let collection else { return nil }
         let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
+        
+        if albumType == .screenRecordings {
+            return (0..<assets.count)
+                .map { assets.object(at: $0) }
+                .first { asset in
+                    let resources = PHAssetResource.assetResources(for: asset)
+                    if let filename = resources.first?.originalFilename.lowercased() {
+                        return filename.contains("rpreplay_final") || filename.contains("screenrecording")
+                    }
+                    return false
+                }
+        }
         return assets.firstObject
     }
     
