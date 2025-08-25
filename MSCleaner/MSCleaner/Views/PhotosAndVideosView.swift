@@ -9,30 +9,54 @@ import SwiftUI
 import CoreData
 
 struct PhotosAndVideosView: View {
-    let items = [
-        ("Screenshots", "2.2 GB"),
-        ("Screen recordings", "2.2 GB"),
-        ("Similar photos", "2.2 GB"),
-        ("Video duplicates", "2.2 GB"),
-    ]
+    @StateObject var viewModel = PhotosAndVideosViewModel()
+    
+    private var items: [MediaTitle] {
+        [
+            MediaTitle(
+                title: "Screenshots",
+                size: viewModel.screenshotsSize
+            ),
+            MediaTitle(
+                title: "Screen recordings",
+                size: viewModel.screenRecordingsSize
+            ),
+            MediaTitle(
+                title: "Similar photos",
+                size: viewModel.similarPhotosSize
+            ),
+            MediaTitle(
+                title: "Video duplicates",
+                size: viewModel.similarVideosSize
+            )
+        ]
+    }
+    
     var body: some View {
         NavigationView {
-            List(items, id: \.0) { item in
-                NavigationLink(destination: destinationView(for: item.0)) {
-                    HStack {
-                        Text(item.0)
-                            .font(.body)
-                        
-                        Spacer()
-                        
-                        Text(item.1)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                }
+            List {
+                mediaRow(title: items[0].title, size: items[0].size, isLoading: viewModel.screenshotsVM.isLoading)
+                mediaRow(title: items[1].title, size: items[1].size, isLoading: viewModel.screenRecordingsVM.isLoading)
+                mediaRow(title: items[2].title, size: items[2].size, isLoading: viewModel.similarPhotosVM.isLoading)
+                mediaRow(title: items[3].title, size: items[3].size, isLoading: viewModel.similarVideosVM.isLoading)
             }
             .navigationTitle("Photos & videos")
+        }
+    }
+    
+    func mediaRow(title: String, size: String, isLoading: Bool) -> some View {
+        NavigationLink(destination: destinationView(for: title)) {
+            HStack {
+                Text(title)
+                    .font(.body)
+                
+                Spacer()
+                
+                Text(size)
+                    .font(.caption)
+                    .foregroundColor(isLoading ? .blue : .secondary)
+            }
+            .padding(.vertical, 4)
         }
     }
     
@@ -40,13 +64,25 @@ struct PhotosAndVideosView: View {
     func destinationView(for itemName: String) -> some View {
         switch itemName {
         case "Screenshots":
-            ScreenshotsView()
-//        case "Screen recordings":
-//            ScreenRecordingsView()
-//        case "Similar photos":
-//            SimilarPhotosView()
-//        case "Video duplicates":
-//            VideoDuplicatesView()
+            PhotosView(
+                title: "Screenshots",
+                viewModel: viewModel.screenshotsVM
+            )
+        case "Screen recordings":
+            VideosView(
+                title: "Screen recordings",
+                viewModel: viewModel.screenRecordingsVM
+            )
+        case "Similar photos":
+            PhotosView(
+                title: "Similar photos",
+                viewModel: viewModel.similarPhotosVM
+            )
+        case "Video duplicates":
+            VideosView(
+                title: "Video duplicates",
+                viewModel: viewModel.similarVideosVM
+            )
         default:
             Text("Unknown item")
         }
@@ -54,6 +90,6 @@ struct PhotosAndVideosView: View {
 }
 
 
-#Preview {
-    PhotosAndVideosView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
-}
+//#Preview {
+//    PhotosAndVideosView()
+//}
