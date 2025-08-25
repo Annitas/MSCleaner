@@ -70,7 +70,7 @@ final class MediaFetchingService {
         return [groupedByDuration]
     }
     
-    func getGroupedPhotos(assets: PHFetchResult<PHAsset>) async -> [Date: [PhotoItem]] {
+    func getGroupedPhotos(assets: PHFetchResult<PHAsset>) async -> [[PhotoItem]] {
         var groupedByDate: [Date: [PhotoItem]] = [:]
         
         let requestOptions = PHImageRequestOptions()
@@ -90,7 +90,7 @@ final class MediaFetchingService {
             }
         }
         print("PHOTOS COMPLETED")
-        return groupedByDate
+        return Array(groupedByDate.values)
     }
     
     func getGroupedVideos(assets: PHFetchResult<PHAsset>) async -> [TimeInterval: [VideoItem]] {

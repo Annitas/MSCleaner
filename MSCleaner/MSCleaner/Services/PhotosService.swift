@@ -114,19 +114,19 @@ final class PhotosService {
     
     func getPhotos(assets: PHFetchResult<PHAsset>, cache: [[PhotoItem]] = []) {
         Task {
-//            let newModels = await grouppedService.getGroupedPhotos(assets: assets)
-//            let latestPhotoDate = newModels.values
-//                .flatMap({ $0 })
-//                .max(by: { ($0.creationDate) < ($1.creationDate)})
-            
-            self.processDuplicatedPhotosAsync(from: await grouppedService.getGroupedPhotos(assets: assets))
+            let newModels = await grouppedService.getGroupedPhotos(assets: assets)
+            self.processDuplicatedPhotosAsync(from: newModels, cache: cache)
         }
     }
     
-    private func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
+    private func processDuplicatedPhotosAsync(from grouped: [[PhotoItem]], cache: [[PhotoItem]]) {
+        let latestPhotoDate = grouped
+            .flatMap({ $0 })
+            .map { $0.creationDate }
+            .max() ?? Date.distantPast
         let operationGroup = DispatchGroup()
         let duplicatesDetector = PhotoDuplicateDetector()
-        for (_, items) in grouped {
+        for items in grouped {
             guard items.count > 1 else { continue }
             let operation = BlockOperation { [weak self] in
                 autoreleasepool {
@@ -145,6 +145,8 @@ final class PhotosService {
         
         operationGroup.notify(queue: .main) { [weak self] in
             guard let self else { return }
+            self.groupedDuplicatedPhotos += cache
+            cacheService.save(CachedSimilarPhotos(items: self.groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
             self.loading(is: false)
             self.sortGroupedDuplicates()
         }
