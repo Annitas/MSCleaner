@@ -33,7 +33,8 @@ final class VideoDuplicateDetector {
             
             if group.count > 1 {
                 let groupWithBest = markBest(in: group)
-                groups.append(setSizes(in: groupWithBest))
+//                groups.append(setSizes(in: groupWithBest))
+                groups.append(groupWithBest)
             }
         }
         return groups
@@ -46,14 +47,14 @@ final class VideoDuplicateDetector {
         return updated
     }
     
-    private func setSizes(in group: [VideoItem]) -> [VideoItem] {
-        let assetSize = getSizeOfAsset(group.first?.asset)
-        return group.map { item in
-            var copy = item
-            copy.data = assetSize
-            return copy
-        }
-    }
+//    private func setSizes(in group: [VideoItem]) -> [VideoItem] {
+//        let assetSize = getSizeOfAsset(group.first?.asset)
+//        return group.map { item in
+//            var copy = item
+//            copy.data = assetSize
+//            return copy
+//        }
+//    }
     
     private func getSizeOfAsset(_ asset: PHAsset?) -> Int64 {
         guard let asset else { return 0 }

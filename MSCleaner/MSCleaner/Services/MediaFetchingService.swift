@@ -53,8 +53,9 @@ final class MediaFetchingService {
                     let frames = await requestPreviewFrames(for: asset,
                                                             targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
-                    return VideoItem(images: frames,
-                                     asset: asset,
+                    return VideoItem(localIdentifier: asset.localIdentifier,
+                                     images: frames,
+                                     creationDate: asset.creationDate ?? Date(),
                                      data: fileSize,
                                      duration: duration)
                 }
@@ -109,8 +110,9 @@ final class MediaFetchingService {
                     let frames = await requestPreviewFrames(for: asset,
                                                             targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
-                    let videoItem = VideoItem(images: frames,
-                                              asset: asset,
+                    let videoItem = VideoItem(localIdentifier: asset.localIdentifier,
+                                              images: frames,
+                                              creationDate: asset.creationDate ?? Date(),
                                               data: fileSize,
                                               duration: duration)
                     return (duration, videoItem)

@@ -68,7 +68,7 @@ final class PhotosService {
         ).firstObject
         guard let collection else { return }
         let newestAssetCreationDate = fetchLatestPhotoAsset()?.creationDate ?? Date.distantPast
-        if let cache = cacheService.load(albumType, as: CachedSimilarPhotos.self) {
+        if let cache = cacheService.load(albumType, as: CachedPhotos.self) {
             if cache.latestPhotoDate == newestAssetCreationDate {
                 groupedDuplicatedPhotos = cache.items.compactMap { $0 }
                 assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
@@ -92,7 +92,7 @@ final class PhotosService {
                 .map { $0.creationDate }
                 .max() ?? Date.distantPast
             groupedDuplicatedPhotos = [newModels + cache.flatMap { $0 }]
-            cacheService.save(CachedSimilarPhotos(items: groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
+            cacheService.save(CachedPhotos(items: groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
             assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
             loading(is: false)
         }
@@ -146,7 +146,7 @@ final class PhotosService {
         operationGroup.notify(queue: .main) { [weak self] in
             guard let self else { return }
             self.groupedDuplicatedPhotos += cache
-            cacheService.save(CachedSimilarPhotos(items: self.groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
+            cacheService.save(CachedPhotos(items: self.groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
             self.loading(is: false)
             self.sortGroupedDuplicates()
         }

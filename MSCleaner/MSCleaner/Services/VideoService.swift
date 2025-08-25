@@ -26,7 +26,7 @@ enum VideoAlbumType {
         }
     }
     
-    func process(service: VideoService, assets: PHFetchResult<PHAsset>, cache: [PhotoItem] = []) {
+    func process(service: VideoService, assets: PHFetchResult<PHAsset>, cache: [[VideoItem]] = []) {
         switch self {
         case .screenRecordings: service.getScreenrecordings(assets: assets)
         case .videoDuplicates:  service.getVideos(assets: assets)
@@ -38,18 +38,16 @@ final class VideoService {
     @Published var isLoading = false
     @Published var grouppedDuplicatedVideos: [[VideoItem]] = []
     @Published var assetSizes: Int64 = 0
-    private let cacheService = PhotosCacheService()
+    private let cacheService = VideoCacheService()
     private let grouppedService = MediaFetchingService()
     private let albumType: VideoAlbumType
-    private let processingQueue = OperationQueue()
     
     init(albumType: VideoAlbumType) {
         self.albumType = albumType
-        processingQueue.maxConcurrentOperationCount = 3
-        fetchPhotos()
+        fetchVideos()
     }
     
-    func fetchPhotos() {
+    func fetchVideos() {
         PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
             guard status == .authorized || status == .limited else { return }
             self?.loadAssets()
@@ -65,11 +63,25 @@ final class VideoService {
             options: nil
         ).firstObject
         guard let collection else { return }
-        let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
-        albumType.process(service: self, assets: assets)
+        let newestAssetCreationDate = fetchLatestVideoAsset()?.creationDate ?? Date.distantPast
+        if let cache = cacheService.load(albumType, as: CachedVideos.self) {
+            if cache.latestVideoDate == newestAssetCreationDate {
+                grouppedDuplicatedVideos = cache.items.compactMap { $0 }
+                assetSizes = grouppedDuplicatedVideos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+                loading(is: false)
+            } else {
+                fetchOptions.predicate = NSPredicate(format: "creationDate > %@", cache.latestVideoDate as NSDate)
+                let cacheVideos = cache.items.flatMap { $0 }
+                let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
+                albumType.process(service: self, assets: assets, cache: [cacheVideos])
+            }
+        } else {
+            let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
+            albumType.process(service: self, assets: assets)
+        }
     }
     
-    func fetchLatestPhotoAsset() -> PHAsset? {
+    func fetchLatestVideoAsset() -> PHAsset? {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         fetchOptions.fetchLimit = 1
@@ -101,6 +113,14 @@ final class VideoService {
         for (_, videoItems) in videos {
             guard videoItems.count > 1 else { continue }
             grouppedDuplicatedVideos += VideoDuplicateDetector().findDuplicates(in: videoItems)
+        }
+    }
+    
+    private func loading(is state: Bool) {
+        Task {
+            await MainActor.run {
+                isLoading = state
+            }
         }
     }
 }

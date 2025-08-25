@@ -10,11 +10,11 @@ import Foundation
 final class PhotosCacheService {
     private let fileManager = FileManager.default
     private let documentsURL: URL
-
+    
     init() {
         documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
-
+    
     func save<T: Codable>(_ cache: T, for type: PhotoAlbumType) {
         let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
         do {
@@ -25,7 +25,7 @@ final class PhotosCacheService {
             print("Error saving cache for \(type): \(error.localizedDescription)")
         }
     }
-
+    
     func load<T: Codable>(_ type: PhotoAlbumType, as: T.Type) -> T? {
         let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
         do {
@@ -36,13 +36,5 @@ final class PhotosCacheService {
             print("Error loading cache for \(type): \(error.localizedDescription)")
             return nil
         }
-    }
-
-    func append<T: Codable & CacheMergeable>(_ newItems: T, for type: PhotoAlbumType) {
-        var merged = newItems
-        if let oldCache: T = load(type, as: T.self) {
-            merged = oldCache.merged(with: newItems)
-        }
-        save(merged, for: type)
     }
 }

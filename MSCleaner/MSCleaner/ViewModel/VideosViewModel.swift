@@ -85,7 +85,7 @@ final class VideosViewModel: ObservableObject {
         var assetsToDelete: [PHAsset] = []
         for group in groupedVideoDuplicates {
             for item in group where item.isSelected {
-                assetsToDelete.append(item.asset)
+//                assetsToDelete.append(item.asset)
             }
         }
         
@@ -112,10 +112,10 @@ final class VideosViewModel: ObservableObject {
         var filteredGroups: [[VideoItem]] = []
         
         for group in groupedVideoDuplicates {
-            let filteredGroup = group.filter { !deletedAssets.contains($0.asset) }
-            if !filteredGroup.isEmpty {
-                filteredGroups.append(filteredGroup)
-            }
+//            let filteredGroup = group.filter { !deletedAssets.contains($0.asset) }
+//            if !filteredGroup.isEmpty {
+//                filteredGroups.append(filteredGroup)
+//            }
         }
         
         groupedVideoDuplicates = filteredGroups
