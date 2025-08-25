@@ -35,23 +35,28 @@ struct PhotosAndVideosView: View {
     var body: some View {
         NavigationView {
             List {
-                ForEach(items, id: \.title) { item in
-                    NavigationLink(destination: destinationView(for: item.title)) {
-                        HStack {
-                            Text(item.title)
-                                .font(.body)
-                            
-                            Spacer()
-                            
-                            Text(item.size)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
+                mediaRow(title: items[0].title, size: items[0].size, isLoading: viewModel.screenshotsVM.isLoading)
+                mediaRow(title: items[1].title, size: items[1].size, isLoading: viewModel.screenRecordingsVM.isLoading)
+                mediaRow(title: items[2].title, size: items[2].size, isLoading: viewModel.similarPhotosVM.isLoading)
+                mediaRow(title: items[3].title, size: items[3].size, isLoading: viewModel.similarVideosVM.isLoading)
             }
             .navigationTitle("Photos & videos")
+        }
+    }
+    
+    func mediaRow(title: String, size: String, isLoading: Bool) -> some View {
+        NavigationLink(destination: destinationView(for: title)) {
+            HStack {
+                Text(title)
+                    .font(.body)
+                
+                Spacer()
+                
+                Text(size)
+                    .font(.caption)
+                    .foregroundColor(isLoading ? .blue : .secondary)
+            }
+            .padding(.vertical, 4)
         }
     }
     
@@ -85,6 +90,6 @@ struct PhotosAndVideosView: View {
 }
 
 
-#Preview {
-    PhotosAndVideosView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
-}
+//#Preview {
+//    PhotosAndVideosView()
+//}

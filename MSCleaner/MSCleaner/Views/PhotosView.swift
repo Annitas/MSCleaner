@@ -160,5 +160,5 @@ struct PhotoCell: View {
 
 
 //#Preview {
-//    ScreenshotsView()
+//    PhotosView(title: "View", viewModel: PhotosViewModel(photoService: PhotosService(albumType: .screenshots)))
 //}

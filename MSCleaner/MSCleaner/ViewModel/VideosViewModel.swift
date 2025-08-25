@@ -14,6 +14,7 @@ final class VideosViewModel: ObservableObject {
     @Published var selectedItemCount = 0
     @Published var deletedDataAmount: Int64 = 0
     @Published var dataAmount: Int64 = 0
+    @Published private(set) var isLoading = false
     
     private var cancellables = Set<AnyCancellable>()
     private let photoService: VideoService
