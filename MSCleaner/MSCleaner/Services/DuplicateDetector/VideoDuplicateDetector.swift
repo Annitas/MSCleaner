@@ -33,7 +33,6 @@ final class VideoDuplicateDetector {
             
             if group.count > 1 {
                 let groupWithBest = markBest(in: group)
-//                groups.append(setSizes(in: groupWithBest))
                 groups.append(groupWithBest)
             }
         }

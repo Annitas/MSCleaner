@@ -28,8 +28,8 @@ enum VideoAlbumType {
     
     func process(service: VideoService, assets: PHFetchResult<PHAsset>, cache: [[VideoItem]] = []) {
         switch self {
-        case .screenRecordings: service.getScreenrecordings(assets: assets)
-        case .videoDuplicates:  service.getVideos(assets: assets)
+        case .screenRecordings: service.getScreenrecordings(assets: assets, cache: cache)
+        case .videoDuplicates:  service.getVideos(assets: assets, cache: cache)
         }
     }
 }
@@ -95,25 +95,37 @@ final class VideoService {
         return assets.firstObject
     }
     
-    func getVideos(assets: PHFetchResult<PHAsset>) {
+    func getVideos(assets: PHFetchResult<PHAsset>, cache: [[VideoItem]] = []) {
         Task {
-            processDuplicatedVideos(for: await grouppedService.getGroupedVideos(assets: assets))
+            processDuplicatedVideos(for: await grouppedService.getGroupedVideos(assets: assets), cache: cache)
             assetSizes = grouppedDuplicatedVideos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
         }
     }
     
-    func getScreenrecordings(assets: PHFetchResult<PHAsset>) {
+    func getScreenrecordings(assets: PHFetchResult<PHAsset>, cache: [[VideoItem]] = []) {
         Task {
-            grouppedDuplicatedVideos = await grouppedService.getScreenRecordings(assets: assets)
+            let newModels = await grouppedService.getScreenRecordings(assets: assets)
+            let latestVideoDate = newModels
+                .flatMap { $0 }
+                .map { $0.creationDate }
+                .max() ?? Date.distantPast
+            grouppedDuplicatedVideos = newModels + cache
+            cacheService.save(CachedVideos(items: grouppedDuplicatedVideos, latestVideoDate: latestVideoDate), for: albumType)
             assetSizes = grouppedDuplicatedVideos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
         }
     }
     
-    private func processDuplicatedVideos(for videos: [TimeInterval : [VideoItem]]) {
-        for (_, videoItems) in videos {
+    private func processDuplicatedVideos(for videos: [[VideoItem]], cache: [[VideoItem]] = []) {
+        let latestVideoDate = videos
+            .flatMap({ $0 })
+            .map { $0.creationDate }
+            .max() ?? Date.distantPast
+        for videoItems in videos {
             guard videoItems.count > 1 else { continue }
             grouppedDuplicatedVideos += VideoDuplicateDetector().findDuplicates(in: videoItems)
         }
+        grouppedDuplicatedVideos += cache
+        cacheService.save(CachedVideos(items: grouppedDuplicatedVideos, latestVideoDate: latestVideoDate), for: albumType)
     }
     
     private func loading(is state: Bool) {

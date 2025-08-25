@@ -17,7 +17,6 @@ final class MediaFetchingService {
         requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isSynchronous = false
         var groupedByDate: [PhotoItem] = []
-        let dateKey = Date()
         for i in 0 ..< assets.count {
             let asset = assets.object(at: i)
             guard let creationDate = asset.creationDate else { continue }
@@ -94,7 +93,7 @@ final class MediaFetchingService {
         return Array(groupedByDate.values)
     }
     
-    func getGroupedVideos(assets: PHFetchResult<PHAsset>) async -> [TimeInterval: [VideoItem]] {
+    func getGroupedVideos(assets: PHFetchResult<PHAsset>) async -> [[VideoItem]] {
         var groupedByDuration: [TimeInterval: [VideoItem]] = [:]
         var videoAssets: [PHAsset] = []
         assets.enumerateObjects { asset, _, _ in
@@ -127,7 +126,7 @@ final class MediaFetchingService {
         }
         
         print("VIDEOS COMPLETED")
-        return groupedByDuration
+        return Array(groupedByDuration.values)
     }
     
     private func requestPreviewFrames(for asset: PHAsset, targetSize: CGSize) async -> [UIImage] {
