@@ -58,6 +58,7 @@ final class PhotosService {
     }
     
     private func loadAssets() {
+        loading(is: true)
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         let collection = PHAssetCollection.fetchAssetCollections(
@@ -73,6 +74,7 @@ final class PhotosService {
                     group.compactMap { $0 }
                 }
                 assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+                loading(is: false)
             } else {
                 fetchOptions.predicate = NSPredicate(format: "creationDate > %@", cache.latestPhotoDate as NSDate)
                 let cachePhotos = cache.items.flatMap { $0 }
@@ -94,6 +96,7 @@ final class PhotosService {
             groupedDuplicatedPhotos = [newModels + cache]
             cacheService.save(CachedSimilarPhotos(items: groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
             assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+            loading(is: false)
         }
     }
     
@@ -119,7 +122,6 @@ final class PhotosService {
     
     private func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
         let operationGroup = DispatchGroup()
-        isLoading = true
         let duplicatesDetector = PhotoDuplicateDetector()
         for (_, items) in grouped {
             guard items.count > 1 else { continue }
@@ -140,8 +142,16 @@ final class PhotosService {
         
         operationGroup.notify(queue: .main) { [weak self] in
             guard let self else { return }
-            self.isLoading = false
+            self.loading(is: false)
             self.sortGroupedDuplicates()
+        }
+    }
+    
+    private func loading(is state: Bool) {
+        Task {
+            await MainActor.run {
+                isLoading = state
+            }
         }
     }
     

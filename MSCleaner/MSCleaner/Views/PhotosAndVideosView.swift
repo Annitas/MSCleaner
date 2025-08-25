@@ -15,19 +15,23 @@ struct PhotosAndVideosView: View {
         [
             MediaTitle(
                 title: "Screenshots",
-                size: viewModel.screenshotsSize
+                size: viewModel.screenshotsSize,
+                isLoading: viewModel.screenshotsVM.isLoading
             ),
             MediaTitle(
                 title: "Screen recordings",
-                size: viewModel.screenRecordingsSize
+                size: viewModel.screenRecordingsSize,
+                isLoading: viewModel.screenRecordingsVM.isLoading
             ),
             MediaTitle(
                 title: "Similar photos",
-                size: viewModel.similarPhotosSize
+                size: viewModel.similarPhotosSize,
+                isLoading: viewModel.similarPhotosVM.isLoading
             ),
             MediaTitle(
                 title: "Video duplicates",
-                size: viewModel.similarVideosSize
+                size: viewModel.similarVideosSize,
+                isLoading: viewModel.similarVideosVM.isLoading
             )
         ]
     }
@@ -35,10 +39,10 @@ struct PhotosAndVideosView: View {
     var body: some View {
         NavigationView {
             List {
-                mediaRow(title: items[0].title, size: items[0].size, isLoading: viewModel.screenshotsVM.isLoading)
-                mediaRow(title: items[1].title, size: items[1].size, isLoading: viewModel.screenRecordingsVM.isLoading)
-                mediaRow(title: items[2].title, size: items[2].size, isLoading: viewModel.similarPhotosVM.isLoading)
-                mediaRow(title: items[3].title, size: items[3].size, isLoading: viewModel.similarVideosVM.isLoading)
+                mediaRow(title: items[0].title, size: items[0].size, isLoading: items[0].isLoading)
+                mediaRow(title: items[1].title, size: items[1].size, isLoading: items[1].isLoading)
+                mediaRow(title: items[2].title, size: items[2].size, isLoading: items[2].isLoading)
+                mediaRow(title: items[3].title, size: items[3].size, isLoading: items[3].isLoading)
             }
             .navigationTitle("Photos & videos")
         }
