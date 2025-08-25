@@ -39,28 +39,23 @@ struct PhotosAndVideosView: View {
     var body: some View {
         NavigationView {
             List {
-                mediaRow(title: items[0].title, size: items[0].size, isLoading: items[0].isLoading)
-                mediaRow(title: items[1].title, size: items[1].size, isLoading: items[1].isLoading)
-                mediaRow(title: items[2].title, size: items[2].size, isLoading: items[2].isLoading)
-                mediaRow(title: items[3].title, size: items[3].size, isLoading: items[3].isLoading)
+                ForEach(items, id: \.title) { item in
+                    NavigationLink(destination: destinationView(for: item.title)) {
+                        HStack {
+                            Text(item.title)
+                                .font(.body)
+                            
+                            Spacer()
+                            
+                            Text(item.size)
+                                .font(.caption)
+                                .foregroundColor(item.isLoading ? .blue : .secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
             }
             .navigationTitle("Photos & videos")
-        }
-    }
-    
-    func mediaRow(title: String, size: String, isLoading: Bool) -> some View {
-        NavigationLink(destination: destinationView(for: title)) {
-            HStack {
-                Text(title)
-                    .font(.body)
-                
-                Spacer()
-                
-                Text(size)
-                    .font(.caption)
-                    .foregroundColor(isLoading ? .blue : .secondary)
-            }
-            .padding(.vertical, 4)
         }
     }
     
