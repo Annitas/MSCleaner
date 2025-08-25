@@ -16,22 +16,22 @@ struct PhotosAndVideosView: View {
             MediaTitle(
                 title: "Screenshots",
                 size: viewModel.screenshotsSize,
-                isLoading: viewModel.screenshotsVM.isLoading
+                isLoading: viewModel.isScreenshotsLoading
             ),
             MediaTitle(
                 title: "Screen recordings",
                 size: viewModel.screenRecordingsSize,
-                isLoading: viewModel.screenRecordingsVM.isLoading
+                isLoading: viewModel.isScreenRecordingsLoading
             ),
             MediaTitle(
                 title: "Similar photos",
                 size: viewModel.similarPhotosSize,
-                isLoading: viewModel.similarPhotosVM.isLoading
+                isLoading: viewModel.isSimilarPhotosLoading
             ),
             MediaTitle(
                 title: "Video duplicates",
                 size: viewModel.similarVideosSize,
-                isLoading: viewModel.similarVideosVM.isLoading
+                isLoading: viewModel.isSimilarVideosLoading
             )
         ]
     }

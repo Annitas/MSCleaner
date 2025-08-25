@@ -18,6 +18,11 @@ final class PhotosAndVideosViewModel: ObservableObject {
     @Published var screenRecordingsVM: VideosViewModel
     @Published var similarVideosVM: VideosViewModel
     
+    @Published var isScreenshotsLoading: Bool = false
+    @Published var isScreenRecordingsLoading: Bool = false
+    @Published var isSimilarPhotosLoading: Bool = false
+    @Published var isSimilarVideosLoading: Bool = false
+    
     @Published private(set) var screenshotsSize: String = ""
     @Published private(set) var similarPhotosSize: String = ""
     @Published private(set) var screenRecordingsSize: String = ""
@@ -40,6 +45,11 @@ final class PhotosAndVideosViewModel: ObservableObject {
         bindPhotoService(similarPhotosService, to: \.similarPhotosSize)
         bindVideoService(screenRecordingsService, to: \.screenRecordingsSize)
         bindVideoService(similarVideosService, to: \.similarVideosSize)
+        
+        screenshotsVM.$isLoading.assign(to: &$isScreenshotsLoading)
+        screenRecordingsVM.$isLoading.assign(to: &$isScreenRecordingsLoading)
+        similarPhotosVM.$isLoading.assign(to: &$isSimilarPhotosLoading)
+        similarVideosVM.$isLoading.assign(to: &$isSimilarVideosLoading)
     }
     
     private func bindPhotoService(_ service: PhotosService, to keyPath: ReferenceWritableKeyPath<PhotosAndVideosViewModel, String>) {
