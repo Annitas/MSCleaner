@@ -24,5 +24,5 @@ final class GalleryManager {
                 print("❌ Failed to delete:", error?.localizedDescription ?? "unknown error")
             }
         }
-    }
+    } // TODO: Add cache cleaning
 }

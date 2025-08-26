@@ -13,7 +13,7 @@ struct MSCleanerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            PhotosAndVideosView()
+            DashboardView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }
