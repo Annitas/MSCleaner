@@ -70,6 +70,45 @@ final class MediaFetchingService {
         return [groupedByDuration]
     }
     
+    func fetchLargeVideos(assets: PHFetchResult<PHAsset>) async -> [[VideoItem]] {
+        let minimumVideoSize: Int64 = 100 * 1024 * 1024 // MARK: 100MB
+        var videoAssets: [PHAsset] = []
+        var result: [VideoItem] = []
+        
+        assets.enumerateObjects { asset, _, _ in
+            if asset.mediaType == .video {
+                videoAssets.append(asset)
+            }
+        }
+        
+        await withTaskGroup(of: VideoItem?.self) { group in
+            for asset in videoAssets {
+                group.addTask { [self] in
+                    let fileSize = await getVideoFileSize(for: asset)
+                    guard fileSize >= minimumVideoSize else { return nil }
+                    
+                    let frames = await requestPreviewFrames(for: asset,
+                                                            targetSize: CGSize(width: 300, height: 300))
+                    guard frames.count == 3 else { return nil }
+                    return VideoItem(localIdentifier: asset.localIdentifier,
+                                     images: frames,
+                                     creationDate: asset.creationDate ?? Date(),
+                                     data: fileSize,
+                                     duration: round(asset.duration))
+                }
+            }
+            
+            for await item in group {
+                if let videoItem = item {
+                    result.append(videoItem)
+                }
+            }
+        }
+        
+        print("LARGE VIDEOS COMPLETED, found: \(result.count)")
+        return [result]
+    }
+    
     func getGroupedPhotos(assets: PHFetchResult<PHAsset>) async -> [[PhotoItem]] {
         var groupedByDate: [Date: [PhotoItem]] = [:]
         

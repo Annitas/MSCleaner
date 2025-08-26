@@ -32,6 +32,11 @@ struct PhotosAndVideosView: View {
                 title: "Video duplicates",
                 size: viewModel.similarVideosSize,
                 isLoading: viewModel.isSimilarVideosLoading
+            ),
+            MediaTitle(
+                title: "Large videos",
+                size: viewModel.largeVideosSize,
+                isLoading: viewModel.isLargeVideosLoading
             )
         ]
     }
@@ -81,6 +86,10 @@ struct PhotosAndVideosView: View {
             VideosView(
                 title: "Video duplicates",
                 viewModel: viewModel.similarVideosVM
+            )
+        case "Large videos":
+            VideosView(title: "Large videos",
+                       viewModel: viewModel.largeVideosVM
             )
         default:
             Text("Unknown item")

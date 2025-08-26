@@ -11,11 +11,13 @@ import Photos
 enum VideoAlbumType {
     case screenRecordings
     case videoDuplicates
+    case largeVideos
     
     var albumSubtype: PHAssetCollectionSubtype {
         switch self {
         case .screenRecordings: return .smartAlbumVideos
         case .videoDuplicates:  return .smartAlbumVideos
+        case .largeVideos: return .smartAlbumVideos
         }
     }
     
@@ -23,6 +25,7 @@ enum VideoAlbumType {
         switch self {
         case .screenRecordings: return "cleanerScreenRecordings.json"
         case .videoDuplicates:  return "cleanerVideoDuplicates.json"
+        case .largeVideos: return "cleanerLargeVideos.json"
         }
     }
     
@@ -30,6 +33,7 @@ enum VideoAlbumType {
         switch self {
         case .screenRecordings: service.getScreenrecordings(assets: assets, cache: cache)
         case .videoDuplicates:  service.getVideos(assets: assets, cache: cache)
+        case .largeVideos: service.getLargeVideos(assets: assets, cache: cache)
         }
     }
 }
@@ -82,32 +86,6 @@ final class VideoService {
         }
     }
     
-    func fetchLatestVideoAsset() -> PHAsset? {
-        let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        fetchOptions.fetchLimit = 1
-        let collection = PHAssetCollection.fetchAssetCollections(
-            with: .smartAlbum,
-            subtype: albumType.albumSubtype,
-            options: nil
-        ).firstObject
-        guard let collection else { return nil }
-        let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
-        
-        if albumType == .screenRecordings {
-            return (0..<assets.count)
-                .map { assets.object(at: $0) }
-                .first { asset in
-                    let resources = PHAssetResource.assetResources(for: asset)
-                    if let filename = resources.first?.originalFilename.lowercased() {
-                        return filename.contains("rpreplay_final") || filename.contains("screenrecording")
-                    }
-                    return false
-                }
-        }
-        return assets.firstObject
-    }
-    
     func getVideos(assets: PHFetchResult<PHAsset>, cache: [[VideoItem]] = []) {
         Task {
             processDuplicatedVideos(for: await grouppedService.getGroupedVideos(assets: assets), cache: cache)
@@ -118,6 +96,20 @@ final class VideoService {
     func getScreenrecordings(assets: PHFetchResult<PHAsset>, cache: [[VideoItem]] = []) {
         Task {
             let newModels = await grouppedService.getScreenRecordings(assets: assets)
+            let latestVideoDate = newModels
+                .flatMap { $0 }
+                .map { $0.creationDate }
+                .max() ?? Date.distantPast
+            grouppedDuplicatedVideos = newModels + cache
+            cacheService.save(CachedVideos(items: grouppedDuplicatedVideos, latestVideoDate: latestVideoDate), for: albumType)
+            assetSizes = grouppedDuplicatedVideos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
+            loading(is: false)
+        }
+    }
+    
+    func getLargeVideos(assets: PHFetchResult<PHAsset>, cache: [[VideoItem]] = []) {
+        Task {
+            let newModels = await grouppedService.fetchLargeVideos(assets: assets)
             let latestVideoDate = newModels
                 .flatMap { $0 }
                 .map { $0.creationDate }
@@ -141,6 +133,48 @@ final class VideoService {
         grouppedDuplicatedVideos += cache
         cacheService.save(CachedVideos(items: grouppedDuplicatedVideos, latestVideoDate: latestVideoDate), for: albumType)
         loading(is: false)
+    }
+    
+    private func fetchLatestVideoAsset() -> PHAsset? {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        fetchOptions.fetchLimit = 1
+        let collection = PHAssetCollection.fetchAssetCollections(
+            with: .smartAlbum,
+            subtype: albumType.albumSubtype,
+            options: nil
+        ).firstObject
+        guard let collection else { return nil }
+        let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
+        
+        if albumType == .screenRecordings {
+            return (0..<assets.count)
+                .map { assets.object(at: $0) }
+                .first { asset in
+                    let resources = PHAssetResource.assetResources(for: asset)
+                    if let filename = resources.first?.originalFilename.lowercased() {
+                        return filename.contains("rpreplay_final") || filename.contains("screenrecording")
+                    }
+                    return false
+                }
+        }
+        if albumType == .largeVideos {
+            return findLatestLargeVideo(in: assets)
+        }
+        return assets.firstObject
+    }
+    
+    private func findLatestLargeVideo(in assets: PHFetchResult<PHAsset>) -> PHAsset? {
+        (0..<assets.count)
+            .map { assets.object(at: $0) }
+            .first { asset in
+                let resources = PHAssetResource.assetResources(for: asset)
+                guard let resource = resources.first,
+                      let fileSize = resource.value(forKey: "fileSize") as? Int64 else {
+                    return false
+                }
+                return fileSize > 100 * 1024 * 1024
+            }
     }
     
     private func loading(is state: Bool) {

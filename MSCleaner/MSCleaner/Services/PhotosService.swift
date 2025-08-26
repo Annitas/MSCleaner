@@ -82,7 +82,6 @@ final class PhotosService {
         } else {
             let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
             albumType.process(service: self, assets: assets)
-            assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
         }
     }
     
@@ -134,6 +133,7 @@ final class PhotosService {
                     guard let self else { return }
                     let duplicates = duplicatesDetector.findDuplicates(in: items)
                     self.groupedDuplicatedPhotos += duplicates
+                    self.assetSizes = self.groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
                 }
             }
             operationGroup.enter()

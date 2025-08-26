@@ -17,16 +17,19 @@ final class PhotosAndVideosViewModel: ObservableObject {
     @Published var similarPhotosVM: PhotosViewModel
     @Published var screenRecordingsVM: VideosViewModel
     @Published var similarVideosVM: VideosViewModel
+    @Published var largeVideosVM: VideosViewModel
     
     @Published var isScreenshotsLoading: Bool = false
     @Published var isScreenRecordingsLoading: Bool = false
     @Published var isSimilarPhotosLoading: Bool = false
     @Published var isSimilarVideosLoading: Bool = false
+    @Published var isLargeVideosLoading: Bool = false
     
     @Published private(set) var screenshotsSize: String = ""
     @Published private(set) var similarPhotosSize: String = ""
     @Published private(set) var screenRecordingsSize: String = ""
     @Published private(set) var similarVideosSize: String = ""
+    @Published private(set) var largeVideosSize: String = ""
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -35,21 +38,25 @@ final class PhotosAndVideosViewModel: ObservableObject {
         let similarPhotosService = PhotosService(albumType: .similarPhotos)
         let screenRecordingsService = VideoService(albumType: .screenRecordings)
         let similarVideosService = VideoService(albumType: .videoDuplicates)
+        let largeVideoService = VideoService(albumType: .largeVideos)
         
         self.screenshotsVM = PhotosViewModel(photoService: screenshotsService)
         self.similarPhotosVM = PhotosViewModel(photoService: similarPhotosService)
         self.screenRecordingsVM = VideosViewModel(photoService: screenRecordingsService)
         self.similarVideosVM = VideosViewModel(photoService: similarVideosService)
+        self.largeVideosVM = VideosViewModel(photoService: largeVideoService)
         
         bindPhotoService(screenshotsService, to: \.screenshotsSize)
         bindPhotoService(similarPhotosService, to: \.similarPhotosSize)
         bindVideoService(screenRecordingsService, to: \.screenRecordingsSize)
         bindVideoService(similarVideosService, to: \.similarVideosSize)
+        bindVideoService(largeVideoService, to: \.largeVideosSize)
         
         screenshotsVM.$isLoading.assign(to: &$isScreenshotsLoading)
         screenRecordingsVM.$isLoading.assign(to: &$isScreenRecordingsLoading)
         similarPhotosVM.$isLoading.assign(to: &$isSimilarPhotosLoading)
         similarVideosVM.$isLoading.assign(to: &$isSimilarVideosLoading)
+        largeVideosVM.$isLoading.assign(to: &$isLargeVideosLoading)
     }
     
     private func bindPhotoService(_ service: PhotosService, to keyPath: ReferenceWritableKeyPath<PhotosAndVideosViewModel, String>) {
