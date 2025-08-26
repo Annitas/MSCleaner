@@ -8,4 +8,5 @@
 struct MediaTitle {
     let title: String
     let size: String
+    let isLoading: Bool
 }

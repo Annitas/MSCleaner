@@ -27,10 +27,10 @@ enum PhotoAlbumType {
         }
     }
     
-    func process(service: PhotosService, assets: PHFetchResult<PHAsset>, cache: [PhotoItem] = []) {
+    func process(service: PhotosService, assets: PHFetchResult<PHAsset>, cache: [[PhotoItem]] = []) {
         switch self {
         case .screenshots:      service.getScreenshots(assets: assets, cache: cache)
-        case .similarPhotos:    service.getPhotos(assets: assets)
+        case .similarPhotos:    service.getPhotos(assets: assets, cache: cache)
         }
     }
 }
@@ -58,6 +58,7 @@ final class PhotosService {
     }
     
     private func loadAssets() {
+        loading(is: true)
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         let collection = PHAssetCollection.fetchAssetCollections(
@@ -67,15 +68,14 @@ final class PhotosService {
         ).firstObject
         guard let collection else { return }
         let newestAssetCreationDate = fetchLatestPhotoAsset()?.creationDate ?? Date.distantPast
-        if let cache = cacheService.load(albumType, as: CachedSimilarPhotos.self) {
+        if let cache = cacheService.load(albumType, as: CachedPhotos.self) {
             if cache.latestPhotoDate == newestAssetCreationDate {
-                groupedDuplicatedPhotos = cache.items.map { group in
-                    group.compactMap { $0 }
-                }
+                groupedDuplicatedPhotos = cache.items
                 assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+                loading(is: false)
             } else {
                 fetchOptions.predicate = NSPredicate(format: "creationDate > %@", cache.latestPhotoDate as NSDate)
-                let cachePhotos = cache.items.flatMap { $0 }
+                let cachePhotos = cache.items
                 let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
                 albumType.process(service: self, assets: assets, cache: cachePhotos)
             }
@@ -85,15 +85,16 @@ final class PhotosService {
         }
     }
     
-    func getScreenshots(assets: PHFetchResult<PHAsset>, cache: [PhotoItem] = []) {
+    func getScreenshots(assets: PHFetchResult<PHAsset>, cache: [[PhotoItem]] = []) {
         Task {
             let newModels = await grouppedService.getScreenshots(assets: assets)
             let latestPhotoDate = newModels
                 .map { $0.creationDate }
                 .max() ?? Date.distantPast
-            groupedDuplicatedPhotos = [newModels + cache]
-            cacheService.save(CachedSimilarPhotos(items: groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
+            groupedDuplicatedPhotos = [newModels + cache.flatMap { $0 }]
+            cacheService.save(CachedPhotos(items: groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
             assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+            loading(is: false)
         }
     }
     
@@ -111,24 +112,28 @@ final class PhotosService {
         return assets.firstObject
     }
     
-    func getPhotos(assets: PHFetchResult<PHAsset>) {
+    func getPhotos(assets: PHFetchResult<PHAsset>, cache: [[PhotoItem]] = []) {
         Task {
-            self.processDuplicatedPhotosAsync(from: await grouppedService.getGroupedPhotos(assets: assets))
+            let newModels = await grouppedService.getGroupedPhotos(assets: assets)
+            self.processDuplicatedPhotosAsync(from: newModels, cache: cache)
         }
     }
     
-    private func processDuplicatedPhotosAsync(from grouped: [Date: [PhotoItem]]) {
+    private func processDuplicatedPhotosAsync(from freshPhotos: [[PhotoItem]], cache: [[PhotoItem]]) {
+        let latestPhotoDate = freshPhotos
+            .flatMap({ $0 })
+            .map { $0.creationDate }
+            .max() ?? Date.distantPast
         let operationGroup = DispatchGroup()
-        isLoading = true
         let duplicatesDetector = PhotoDuplicateDetector()
-        for (_, items) in grouped {
+        for items in freshPhotos {
             guard items.count > 1 else { continue }
             let operation = BlockOperation { [weak self] in
                 autoreleasepool {
                     guard let self else { return }
                     let duplicates = duplicatesDetector.findDuplicates(in: items)
                     self.groupedDuplicatedPhotos += duplicates
-                    self.assetSizes += duplicates.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
+                    self.assetSizes = self.groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
                 }
             }
             operationGroup.enter()
@@ -140,8 +145,18 @@ final class PhotosService {
         
         operationGroup.notify(queue: .main) { [weak self] in
             guard let self else { return }
-            self.isLoading = false
+            self.groupedDuplicatedPhotos += cache
+            cacheService.save(CachedPhotos(items: self.groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
+            self.loading(is: false)
             self.sortGroupedDuplicates()
+        }
+    }
+    
+    private func loading(is state: Bool) {
+        Task {
+            await MainActor.run {
+                isLoading = state
+            }
         }
     }
     

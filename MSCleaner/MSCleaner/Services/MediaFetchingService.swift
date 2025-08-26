@@ -17,7 +17,6 @@ final class MediaFetchingService {
         requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isSynchronous = false
         var groupedByDate: [PhotoItem] = []
-        let dateKey = Date()
         for i in 0 ..< assets.count {
             let asset = assets.object(at: i)
             guard let creationDate = asset.creationDate else { continue }
@@ -53,8 +52,9 @@ final class MediaFetchingService {
                     let frames = await requestPreviewFrames(for: asset,
                                                             targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
-                    return VideoItem(images: frames,
-                                     asset: asset,
+                    return VideoItem(localIdentifier: asset.localIdentifier,
+                                     images: frames,
+                                     creationDate: asset.creationDate ?? Date(),
                                      data: fileSize,
                                      duration: duration)
                 }
@@ -70,7 +70,46 @@ final class MediaFetchingService {
         return [groupedByDuration]
     }
     
-    func getGroupedPhotos(assets: PHFetchResult<PHAsset>) async -> [Date: [PhotoItem]] {
+    func fetchLargeVideos(assets: PHFetchResult<PHAsset>) async -> [[VideoItem]] {
+        let minimumVideoSize: Int64 = 100 * 1024 * 1024 // MARK: 100MB
+        var videoAssets: [PHAsset] = []
+        var result: [VideoItem] = []
+        
+        assets.enumerateObjects { asset, _, _ in
+            if asset.mediaType == .video {
+                videoAssets.append(asset)
+            }
+        }
+        
+        await withTaskGroup(of: VideoItem?.self) { group in
+            for asset in videoAssets {
+                group.addTask { [self] in
+                    let fileSize = await getVideoFileSize(for: asset)
+                    guard fileSize >= minimumVideoSize else { return nil }
+                    
+                    let frames = await requestPreviewFrames(for: asset,
+                                                            targetSize: CGSize(width: 300, height: 300))
+                    guard frames.count == 3 else { return nil }
+                    return VideoItem(localIdentifier: asset.localIdentifier,
+                                     images: frames,
+                                     creationDate: asset.creationDate ?? Date(),
+                                     data: fileSize,
+                                     duration: round(asset.duration))
+                }
+            }
+            
+            for await item in group {
+                if let videoItem = item {
+                    result.append(videoItem)
+                }
+            }
+        }
+        
+        print("LARGE VIDEOS COMPLETED, found: \(result.count)")
+        return [result]
+    }
+    
+    func getGroupedPhotos(assets: PHFetchResult<PHAsset>) async -> [[PhotoItem]] {
         var groupedByDate: [Date: [PhotoItem]] = [:]
         
         let requestOptions = PHImageRequestOptions()
@@ -90,10 +129,10 @@ final class MediaFetchingService {
             }
         }
         print("PHOTOS COMPLETED")
-        return groupedByDate
+        return Array(groupedByDate.values)
     }
     
-    func getGroupedVideos(assets: PHFetchResult<PHAsset>) async -> [TimeInterval: [VideoItem]] {
+    func getGroupedVideos(assets: PHFetchResult<PHAsset>) async -> [[VideoItem]] {
         var groupedByDuration: [TimeInterval: [VideoItem]] = [:]
         var videoAssets: [PHAsset] = []
         assets.enumerateObjects { asset, _, _ in
@@ -109,8 +148,9 @@ final class MediaFetchingService {
                     let frames = await requestPreviewFrames(for: asset,
                                                             targetSize: CGSize(width: 300, height: 300))
                     guard frames.count == 3 else { return nil }
-                    let videoItem = VideoItem(images: frames,
-                                              asset: asset,
+                    let videoItem = VideoItem(localIdentifier: asset.localIdentifier,
+                                              images: frames,
+                                              creationDate: asset.creationDate ?? Date(),
                                               data: fileSize,
                                               duration: duration)
                     return (duration, videoItem)
@@ -125,7 +165,7 @@ final class MediaFetchingService {
         }
         
         print("VIDEOS COMPLETED")
-        return groupedByDuration
+        return Array(groupedByDuration.values)
     }
     
     private func requestPreviewFrames(for asset: PHAsset, targetSize: CGSize) async -> [UIImage] {

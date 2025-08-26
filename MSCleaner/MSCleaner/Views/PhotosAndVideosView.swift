@@ -15,19 +15,28 @@ struct PhotosAndVideosView: View {
         [
             MediaTitle(
                 title: "Screenshots",
-                size: viewModel.screenshotsSize
+                size: viewModel.screenshotsSize,
+                isLoading: viewModel.isScreenshotsLoading
             ),
             MediaTitle(
                 title: "Screen recordings",
-                size: viewModel.screenRecordingsSize
+                size: viewModel.screenRecordingsSize,
+                isLoading: viewModel.isScreenRecordingsLoading
             ),
             MediaTitle(
                 title: "Similar photos",
-                size: viewModel.similarPhotosSize
+                size: viewModel.similarPhotosSize,
+                isLoading: viewModel.isSimilarPhotosLoading
             ),
             MediaTitle(
                 title: "Video duplicates",
-                size: viewModel.similarVideosSize
+                size: viewModel.similarVideosSize,
+                isLoading: viewModel.isSimilarVideosLoading
+            ),
+            MediaTitle(
+                title: "Large videos",
+                size: viewModel.largeVideosSize,
+                isLoading: viewModel.isLargeVideosLoading
             )
         ]
     }
@@ -35,28 +44,23 @@ struct PhotosAndVideosView: View {
     var body: some View {
         NavigationView {
             List {
-                mediaRow(title: items[0].title, size: items[0].size, isLoading: viewModel.screenshotsVM.isLoading)
-                mediaRow(title: items[1].title, size: items[1].size, isLoading: viewModel.screenRecordingsVM.isLoading)
-                mediaRow(title: items[2].title, size: items[2].size, isLoading: viewModel.similarPhotosVM.isLoading)
-                mediaRow(title: items[3].title, size: items[3].size, isLoading: viewModel.similarVideosVM.isLoading)
+                ForEach(items, id: \.title) { item in
+                    NavigationLink(destination: destinationView(for: item.title)) {
+                        HStack {
+                            Text(item.title)
+                                .font(.body)
+                            
+                            Spacer()
+                            
+                            Text(item.size)
+                                .font(.caption)
+                                .foregroundColor(item.isLoading ? .blue : .secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
             }
             .navigationTitle("Photos & videos")
-        }
-    }
-    
-    func mediaRow(title: String, size: String, isLoading: Bool) -> some View {
-        NavigationLink(destination: destinationView(for: title)) {
-            HStack {
-                Text(title)
-                    .font(.body)
-                
-                Spacer()
-                
-                Text(size)
-                    .font(.caption)
-                    .foregroundColor(isLoading ? .blue : .secondary)
-            }
-            .padding(.vertical, 4)
         }
     }
     
@@ -82,6 +86,10 @@ struct PhotosAndVideosView: View {
             VideosView(
                 title: "Video duplicates",
                 viewModel: viewModel.similarVideosVM
+            )
+        case "Large videos":
+            VideosView(title: "Large videos",
+                       viewModel: viewModel.largeVideosVM
             )
         default:
             Text("Unknown item")
