@@ -94,8 +94,6 @@ struct DashboardView: View {
                 .background(Color.white)
                 .cornerRadius(12)
                 .padding()
-                
-                Spacer()
             }
         }
         .background(
@@ -104,6 +102,16 @@ struct DashboardView: View {
                            endPoint: .bottom)
             .ignoresSafeArea()
         )
+    }
+    
+    @ViewBuilder
+    func destinationView(for itemName: String) -> some View {
+        switch itemName {
+        case "Photos & Videos":
+            PhotosAndVideosView()
+        default:
+            Text("Unknown item")
+        }
     }
 }
 
