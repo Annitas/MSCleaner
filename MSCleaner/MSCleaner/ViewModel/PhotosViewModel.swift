@@ -85,42 +85,27 @@ final class PhotosViewModel: ObservableObject {
     
     @MainActor
     func deleteSelected() {
-        var assetsToDelete: [PHAsset] = []
+        var assetsToDelete: [String] = []
         for group in groupedPhotoDuplicates {
             for item in group where item.isSelected {
-//                assetsToDelete.append(item.asset)
+                assetsToDelete.append(item.localIdentifier)
             }
         }
-        
         guard !assetsToDelete.isEmpty else { return }
-        
-        PHPhotoLibrary.shared().performChanges({
-            PHAssetChangeRequest.deleteAssets(assetsToDelete as NSArray)
-        }) { [weak self] success, error in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                
-                if success {
-                    self.removeDeletedItems(assetsToDelete)
-                    self.resetSelection()
-                } else if let error = error {
-                    print("!!! Error deleteSelected \(error)")
-                }
-            }
-        }
+        GalleryManager().deletePhotos(for: assetsToDelete)
+        removeDeletedItems(assetsToDelete)
+        self.resetSelection()
     }
     
     @MainActor
-    private func removeDeletedItems(_ deletedAssets: [PHAsset]) {
+    private func removeDeletedItems(_ deletedAssets: [String]) {
         var filteredGroups: [[PhotoItem]] = []
-        
         for group in groupedPhotoDuplicates {
-//            let filteredGroup = group.filter { !deletedAssets.contains($0.asset) }
-//            if !filteredGroup.isEmpty {
-//                filteredGroups.append(filteredGroup)
-//            }
+            let filteredGroup = group.filter { !deletedAssets.contains($0.localIdentifier) }
+            if !filteredGroup.isEmpty {
+                filteredGroups.append(filteredGroup)
+            }
         }
-        
         groupedPhotoDuplicates = filteredGroups
     }
     
