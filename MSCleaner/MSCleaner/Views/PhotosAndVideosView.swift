@@ -14,26 +14,31 @@ struct PhotosAndVideosView: View {
     private var items: [MediaTitle] {
         [
             MediaTitle(
+                imageName: "photo.on.rectangle",
                 title: "Screenshots",
                 size: viewModel.screenshotsSize,
                 isLoading: viewModel.isScreenshotsLoading
             ),
             MediaTitle(
+                imageName: "photo.on.rectangle",
                 title: "Screen recordings",
                 size: viewModel.screenRecordingsSize,
                 isLoading: viewModel.isScreenRecordingsLoading
             ),
             MediaTitle(
+                imageName: "photo.on.rectangle",
                 title: "Similar photos",
                 size: viewModel.similarPhotosSize,
                 isLoading: viewModel.isSimilarPhotosLoading
             ),
             MediaTitle(
+                imageName: "photo.on.rectangle",
                 title: "Video duplicates",
                 size: viewModel.similarVideosSize,
                 isLoading: viewModel.isSimilarVideosLoading
             ),
             MediaTitle(
+                imageName: "photo.on.rectangle",
                 title: "Large videos",
                 size: viewModel.largeVideosSize,
                 isLoading: viewModel.isLargeVideosLoading

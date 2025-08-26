@@ -14,6 +14,26 @@ struct DashboardView: View {
     let total: Double = 128
     let percent: Double = 0.38
     
+    private var items: [MediaTitle] {
+        [
+            MediaTitle(imageName: "photo.on.rectangle",
+                       title: "Photos & Videos",
+                       size: "kek size",
+                       isLoading: false
+                      ),
+            MediaTitle(imageName: "person.2.fill",
+                       title: "Contact",
+                       size: "kek size",
+                       isLoading: false
+                      ),
+            MediaTitle(imageName: "calendar",
+                       title: "Calendar",
+                       size: "kek size",
+                       isLoading: false
+                      )
+        ]
+    }
+    
     var body: some View {
         VStack {
             // MARK: - Header
@@ -81,19 +101,28 @@ struct DashboardView: View {
             }
             .padding(.horizontal)
             
-            // MARK: - List
             NavigationView {
-                VStack(spacing: 0) {
-                    StorageRow(icon: "photo.on.rectangle", title: "Photos & Videos", detail: "2.2 GB")
-                    Divider()
-                    StorageRow(icon: "person.2.fill", title: "Contact", detail: "251")
-                    Divider()
-                    StorageRow(icon: "calendar", title: "Calendar", detail: "4214")
+                List {
+                    ForEach(items, id: \.title) { item in
+                        NavigationLink(destination: destinationView(for: item.title)) {
+                            HStack {
+                                Image(systemName: item.imageName)
+                                    .foregroundColor(.blue)
+                                    .frame(width: 24, height: 24)
+                                
+                                Text(item.title)
+                                    .font(.body)
+                                
+                                Spacer()
+                                
+                                Text(item.size)
+                                    .font(.caption)
+                                    .foregroundColor(item.isLoading ? .blue : .secondary)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
                 }
-                .padding(.top, 20)
-                .background(Color.white)
-                .cornerRadius(12)
-                .padding()
             }
         }
         .background(
@@ -115,6 +144,8 @@ struct DashboardView: View {
     }
 }
 
+
+// MARK: For furure media row:
 struct StorageRow: View {
     let icon: String
     let title: String

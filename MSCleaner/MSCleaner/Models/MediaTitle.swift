@@ -6,6 +6,7 @@
 //
 
 struct MediaTitle {
+    let imageName: String
     let title: String
     let size: String
     let isLoading: Bool
