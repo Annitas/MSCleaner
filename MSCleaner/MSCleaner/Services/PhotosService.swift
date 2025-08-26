@@ -70,7 +70,7 @@ final class PhotosService {
         let newestAssetCreationDate = fetchLatestPhotoAsset()?.creationDate ?? Date.distantPast
         if let cache = cacheService.load(albumType, as: CachedPhotos.self) {
             if cache.latestPhotoDate == newestAssetCreationDate {
-                groupedDuplicatedPhotos = cache.items.compactMap { $0 }
+                groupedDuplicatedPhotos = cache.items
                 assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
                 loading(is: false)
             } else {
@@ -119,14 +119,14 @@ final class PhotosService {
         }
     }
     
-    private func processDuplicatedPhotosAsync(from grouped: [[PhotoItem]], cache: [[PhotoItem]]) {
-        let latestPhotoDate = grouped
+    private func processDuplicatedPhotosAsync(from freshPhotos: [[PhotoItem]], cache: [[PhotoItem]]) {
+        let latestPhotoDate = freshPhotos
             .flatMap({ $0 })
             .map { $0.creationDate }
             .max() ?? Date.distantPast
         let operationGroup = DispatchGroup()
         let duplicatesDetector = PhotoDuplicateDetector()
-        for items in grouped {
+        for items in freshPhotos {
             guard items.count > 1 else { continue }
             let operation = BlockOperation { [weak self] in
                 autoreleasepool {
