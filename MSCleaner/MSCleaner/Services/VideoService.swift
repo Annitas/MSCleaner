@@ -55,6 +55,7 @@ final class VideoService {
     }
     
     private func loadAssets() {
+        loading(is: true)
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         let collection = PHAssetCollection.fetchAssetCollections(
@@ -124,6 +125,7 @@ final class VideoService {
             grouppedDuplicatedVideos = newModels + cache
             cacheService.save(CachedVideos(items: grouppedDuplicatedVideos, latestVideoDate: latestVideoDate), for: albumType)
             assetSizes = grouppedDuplicatedVideos.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
+            loading(is: false)
         }
     }
     
@@ -138,6 +140,7 @@ final class VideoService {
         }
         grouppedDuplicatedVideos += cache
         cacheService.save(CachedVideos(items: grouppedDuplicatedVideos, latestVideoDate: latestVideoDate), for: albumType)
+        loading(is: false)
     }
     
     private func loading(is state: Bool) {
