@@ -71,14 +71,14 @@ final class PhotosService {
         if let cache = cacheService.load(albumType, as: CachedPhotos.self) {
             if cache.latestPhotoDate == newestAssetCreationDate {
                 groupedDuplicatedPhotos = cache.items
-                assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
                 loading(is: false)
             } else {
                 fetchOptions.predicate = NSPredicate(format: "creationDate > %@", cache.latestPhotoDate as NSDate)
-                let cachePhotos = cache.items.flatMap { $0 }
+                let cachePhotos = cache.items
                 let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
-                albumType.process(service: self, assets: assets, cache: [cachePhotos])
+                albumType.process(service: self, assets: assets, cache: cachePhotos)
             }
+            assetSizes = groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
         } else {
             let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
             albumType.process(service: self, assets: assets)
@@ -133,7 +133,6 @@ final class PhotosService {
                     guard let self else { return }
                     let duplicates = duplicatesDetector.findDuplicates(in: items)
                     self.groupedDuplicatedPhotos += duplicates
-                    self.assetSizes += duplicates.flatMap { $0 }.map { $0.data }.reduce(0) { $0 + $1 }
                 }
             }
             operationGroup.enter()
