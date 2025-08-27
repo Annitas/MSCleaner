@@ -94,11 +94,12 @@ struct DashboardView: View {
                         .font(.headline).bold()
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(24)
                         .background(Color.blue)
                         .cornerRadius(12)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
                 
                 // MARK: - List for categories
                 
@@ -119,8 +120,9 @@ struct DashboardView: View {
                                     .font(.caption)
                                     .foregroundColor(item.isLoading ? .blue : .secondary)
                             }
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 12)
                         }
+                        .listRowBackground(Color.clear)
                     }
                 }
                 .scrollContentBackground(.hidden)
@@ -128,7 +130,7 @@ struct DashboardView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
-                LinearGradient(colors: [Color.blue, Color.white],
+                LinearGradient(colors: [Color.blue, Color.blue.opacity(0.6), Color.white.opacity(0.2), Color.white],
                                startPoint: .top,
                                endPoint: .bottom)
                 .ignoresSafeArea()
