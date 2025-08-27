@@ -47,7 +47,6 @@ struct PhotosAndVideosView: View {
     }
     
     var body: some View {
-        NavigationView {
             List {
                 ForEach(items, id: \.title) { item in
                     NavigationLink(destination: destinationView(for: item.title)) {
@@ -64,7 +63,6 @@ struct PhotosAndVideosView: View {
                         .padding(.vertical, 4)
                     }
                 }
-            }
             .navigationTitle("Photos & videos")
         }
     }
