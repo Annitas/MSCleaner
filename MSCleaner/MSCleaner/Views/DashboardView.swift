@@ -35,73 +35,73 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        VStack {
-            // MARK: - Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(phoneModel)
-                        .font(.title2).bold()
-                        .foregroundColor(.white)
-                    Text(iosVersion)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
+        NavigationView {
+            VStack {
+                // MARK: - Header
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(phoneModel)
+                            .font(.title2).bold()
+                            .foregroundColor(.white)
+                        Text(iosVersion)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    Spacer()
+                    Button(action: {}) {
+                        Text("★ PRO")
+                            .font(.subheadline).bold()
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.orange)
+                            .cornerRadius(6)
+                    }
+                    Button(action: {}) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.title3)
+                            .foregroundColor(.white)
+                            .padding(6)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(Circle())
+                    }
                 }
-                Spacer()
-                Button(action: {}) {
-                    Text("★ PRO")
-                        .font(.subheadline).bold()
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.orange)
-                        .cornerRadius(6)
-                }
-                Button(action: {}) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                        .padding(6)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(Circle())
-                }
-            }
-            .padding()
-            
-            Spacer()
-            
-            // MARK: - Circular Progress
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.3), lineWidth: 12)
-                Circle()
-                    .trim(from: 0, to: percent)
-                    .stroke(Color.white, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
+                .padding()
                 
-                VStack {
-                    Text("\(Int(percent * 100))%")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundColor(.white)
-                    Text(String(format: "%.1f / %.0f GB", used, total))
-                        .foregroundColor(.white.opacity(0.8))
+                // MARK: - Circular Progress
+                ZStack {
+                    Circle()
+                        .stroke(Color.white.opacity(0.3), lineWidth: 12)
+                    Circle()
+                        .trim(from: 0, to: percent)
+                        .stroke(Color.white, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    
+                    VStack {
+                        Text("\(Int(percent * 100))%")
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundColor(.white)
+                        Text(String(format: "%.1f / %.0f GB", used, total))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                 }
-            }
-            .frame(width: 200, height: 200)
-            .padding(.bottom, 30)
-            
-            // MARK: - Button
-            Button(action: {}) {
-                Text("SMART ANALYZE")
-                    .font(.headline).bold()
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .cornerRadius(12)
-            }
-            .padding(.horizontal)
-            
-            NavigationView {
+                .frame(width: 200, height: 200)
+                .padding(.bottom, 30)
+                
+                // MARK: - Button SMART ANALYZE
+                Button(action: {}) {
+                    Text("SMART ANALYZE")
+                        .font(.headline).bold()
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                
+                // MARK: - List for categories
+                
                 List {
                     ForEach(items, id: \.title) { item in
                         NavigationLink(destination: destinationView(for: item.title)) {
@@ -123,14 +123,17 @@ struct DashboardView: View {
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                LinearGradient(colors: [Color.blue, Color.white],
+                               startPoint: .top,
+                               endPoint: .bottom)
+                .ignoresSafeArea()
+            )
         }
-        .background(
-            LinearGradient(colors: [Color.blue, Color.blue.opacity(0.8)],
-                           startPoint: .top,
-                           endPoint: .bottom)
-            .ignoresSafeArea()
-        )
     }
     
     @ViewBuilder
