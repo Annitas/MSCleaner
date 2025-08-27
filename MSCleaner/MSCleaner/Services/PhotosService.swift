@@ -71,6 +71,7 @@ final class PhotosService {
         if let cache = cacheService.load(albumType, as: CachedPhotos.self) {
             if cache.latestPhotoDate == newestAssetCreationDate {
                 groupedDuplicatedPhotos = cache.items
+                sortGroupedDuplicates()
                 assetSizes = cache.items.flatMap { $0 }.map { $0.data }.reduce(0, +)
                 loading(is: false)
             } else {
