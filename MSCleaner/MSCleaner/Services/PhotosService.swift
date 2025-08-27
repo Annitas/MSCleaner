@@ -134,7 +134,7 @@ final class PhotosService {
                     guard let self else { return }
                     let duplicates = duplicatesDetector.findDuplicates(in: items)
                     self.groupedDuplicatedPhotos += duplicates
-                    self.assetSizes = self.groupedDuplicatedPhotos.flatMap { $0 }.map { $0.data }.reduce(0, +)
+                    self.assetSizes += duplicates.flatMap { $0 }.map { $0.data }.reduce(0, +)
                 }
             }
             operationGroup.enter()
@@ -147,6 +147,7 @@ final class PhotosService {
         operationGroup.notify(queue: .main) { [weak self] in
             guard let self else { return }
             self.groupedDuplicatedPhotos += cache
+            self.assetSizes += cache.flatMap { $0 }.map { $0.data }.reduce(0, +)
             cacheService.save(CachedPhotos(items: self.groupedDuplicatedPhotos, latestPhotoDate: latestPhotoDate), for: albumType)
             self.loading(is: false)
             self.sortGroupedDuplicates()
