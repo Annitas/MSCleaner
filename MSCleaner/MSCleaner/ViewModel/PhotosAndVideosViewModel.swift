@@ -42,9 +42,9 @@ final class PhotosAndVideosViewModel: ObservableObject {
         
         self.screenshotsVM = PhotosViewModel(photoService: screenshotsService)
         self.similarPhotosVM = PhotosViewModel(photoService: similarPhotosService)
-        self.screenRecordingsVM = VideosViewModel(photoService: screenRecordingsService)
-        self.similarVideosVM = VideosViewModel(photoService: similarVideosService)
-        self.largeVideosVM = VideosViewModel(photoService: largeVideoService)
+        self.screenRecordingsVM = VideosViewModel(videoService: screenRecordingsService)
+        self.similarVideosVM = VideosViewModel(videoService: similarVideosService)
+        self.largeVideosVM = VideosViewModel(videoService: largeVideoService)
         
         bindPhotoService(screenshotsService, to: \.screenshotsSize)
         bindPhotoService(similarPhotosService, to: \.similarPhotosSize)
