@@ -17,16 +17,16 @@ final class VideosViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     
     private var cancellables = Set<AnyCancellable>()
-    private let photoService: VideoService
+    private let videoService: VideoService
     
     var formattedDeletedDataAmount: String {
         ByteCountFormatter.string(fromByteCount: deletedDataAmount, countStyle: .file)
     }
     
-    init(photoService: VideoService) {
-        self.photoService = photoService
+    init(videoService: VideoService) {
+        self.videoService = videoService
         
-        photoService.$grouppedDuplicatedVideos
+        videoService.$grouppedDuplicatedVideos
             .receive(on: DispatchQueue.main)
             .assign(to: &$groupedVideoDuplicates)
         
@@ -43,6 +43,10 @@ final class VideosViewModel: ObservableObject {
         $groupedVideoDuplicates
             .map { $0.flatMap { $0 }.filter { $0.isSelected }.count }
             .assign(to: &$selectedItemCount)
+        
+        videoService.$isLoading
+                    .receive(on: DispatchQueue.main)
+                    .assign(to: &$isLoading)
     }
     
     @MainActor
