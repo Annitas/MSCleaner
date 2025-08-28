@@ -11,9 +11,9 @@ struct DashboardView: View {
     private let viewModel = DashboardViewModel()
     private let phoneModel: String
     private let iosVersion: String
-    private let used: Double// = 32.2
-    private let total: Double// = 128
-    private let percent: Double// = 0.38
+    private let used: Double
+    private let total: Double
+    private let percent: Double
     
     private var items: [MediaTitle] {
         [
@@ -155,30 +155,5 @@ struct DashboardView: View {
         default:
             Text("Unknown item")
         }
-    }
-}
-
-
-// MARK: For furure media row:
-struct StorageRow: View {
-    let icon: String
-    let title: String
-    let detail: String
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.blue)
-                .frame(width: 24, height: 24)
-            Text(title)
-                .foregroundColor(.black)
-            Spacer()
-            Text(detail)
-                .foregroundColor(.gray)
-            Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
     }
 }
