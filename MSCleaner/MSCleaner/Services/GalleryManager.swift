@@ -8,6 +8,20 @@
 import Photos
 
 final class GalleryManager {
+    func calculateGallerySize() -> Double {
+        var totalSize: Double = 0
+        let assets = PHAsset.fetchAssets(with: nil)
+        assets.enumerateObjects { asset, _, _ in
+            let resources = PHAssetResource.assetResources(for: asset)
+            for resource in resources {
+                if let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong {
+                    totalSize += Double(unsignedInt64)
+                }
+            }
+        }
+        return totalSize * pow(10.0, -9.0)
+    }
+    
     func deletePhotos(for identifiers: [String], completion: @escaping (Bool) -> Void) {
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
         var assetArray: [PHAsset] = []

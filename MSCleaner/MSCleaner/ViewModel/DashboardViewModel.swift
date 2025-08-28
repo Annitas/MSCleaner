@@ -8,6 +8,7 @@
 import SwiftUI
 
 final class DashboardViewModel {
+    private let galeryManager = GalleryManager()
     lazy var phoneModel: String = {
         deviceModelName()
     }()
@@ -15,9 +16,15 @@ final class DashboardViewModel {
     var usedSpace: Double = 0
     var totalSpace: Double = 0
     var usedPercent: Double = 0
+    var gallerySize: Double = 0
     
     init() {
         storageUsagePercent()
+        calculateGallerySize()
+    }
+    
+    private func calculateGallerySize() {
+        gallerySize = galeryManager.calculateGallerySize()
     }
     
     // MARK: - Storage usage

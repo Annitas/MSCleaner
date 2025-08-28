@@ -19,7 +19,7 @@ struct DashboardView: View {
         [
             MediaTitle(imageName: "photo.on.rectangle",
                        title: "Photos & Videos",
-                       size: "kek size",
+                       size: String(format: "%.2f GB", viewModel.gallerySize),
                        isLoading: false
                       ),
             MediaTitle(imageName: "person.2.fill",
