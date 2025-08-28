@@ -13,7 +13,7 @@ final class DashboardViewModel {
     }()
     let systemVersion = "iOS \(UIDevice.current.systemVersion)"
     var usedSpace: Double = 0
-    var totalSpace: Double = 0
+    var totalSpace: Double = 1
     var usedPercent: Double = 0
     
     init() {
@@ -26,10 +26,11 @@ final class DashboardViewModel {
         let attributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
         guard let attributes, let total = attributes[.systemSize] as? NSNumber,
               let free = attributes[.systemFreeSize] as? NSNumber else { return 0 }
-        totalSpace = total.doubleValue
+        let totalS = total.doubleValue
         let freeSpace = free.doubleValue
-        usedSpace = totalSpace - freeSpace
-        usedPercent = (usedSpace / totalSpace) * 100.0
+        let usedS = totalS - freeSpace
+        usedPercent = (usedS / totalS) * 100.0
+        print()
         return (usedSpace / totalSpace) * 100.0
     }
     
@@ -105,4 +106,16 @@ final class DashboardViewModel {
         default: return identifier
         }
     }
+}
+
+extension Double {
+    var roundedTo2: Double {
+        (self * 100).rounded() / 100
+    }
+}
+
+extension Double {
+    var kb: Double { self / 1_024 }
+    var mb: Double { self / 1_048_576 }
+    var gb: Double { self / 1_073_741_824 }
 }

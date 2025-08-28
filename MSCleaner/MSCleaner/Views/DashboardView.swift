@@ -87,7 +87,7 @@ struct DashboardView: View {
                         .rotationEffect(.degrees(-90))
                     
                     VStack {
-                        Text("\(Int(percent * 100))%")
+                        Text("\(Int(percent))%")
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(.white)
                         Text(String(format: "%.1f / %.0f GB", used, total))
