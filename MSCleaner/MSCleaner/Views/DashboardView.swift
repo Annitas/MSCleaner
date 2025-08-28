@@ -82,7 +82,7 @@ struct DashboardView: View {
                     Circle()
                         .stroke(Color.white.opacity(0.3), lineWidth: 12)
                     Circle()
-                        .trim(from: 0, to: percent)
+                        .trim(from: 0, to: percent/100)
                         .stroke(Color.white, style: StrokeStyle(lineWidth: 12, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     

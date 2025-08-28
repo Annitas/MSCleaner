@@ -13,25 +13,25 @@ final class DashboardViewModel {
     }()
     let systemVersion = "iOS \(UIDevice.current.systemVersion)"
     var usedSpace: Double = 0
-    var totalSpace: Double = 1
+    var totalSpace: Double = 0
     var usedPercent: Double = 0
     
     init() {
-        print("Storage%: \(storageUsagePercent())")
+        storageUsagePercent()
     }
     
     // MARK: - Storage usage
     
-    func storageUsagePercent() -> Double {
+    func storageUsagePercent() {
         let attributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
         guard let attributes, let total = attributes[.systemSize] as? NSNumber,
-              let free = attributes[.systemFreeSize] as? NSNumber else { return 0 }
+              let free = attributes[.systemFreeSize] as? NSNumber else { return }
         let totalS = total.doubleValue
         let freeSpace = free.doubleValue
         let usedS = totalS - freeSpace
         usedPercent = (usedS / totalS) * 100.0
-        print()
-        return (usedSpace / totalSpace) * 100.0
+        totalSpace = (totalS  * pow(10.0, -9.0)).rounded(.up)
+        usedSpace = (usedS  * pow(10.0, -9.0))
     }
     
     private func deviceModelName() -> String {
@@ -112,10 +112,4 @@ extension Double {
     var roundedTo2: Double {
         (self * 100).rounded() / 100
     }
-}
-
-extension Double {
-    var kb: Double { self / 1_024 }
-    var mb: Double { self / 1_048_576 }
-    var gb: Double { self / 1_073_741_824 }
 }
