@@ -12,8 +12,26 @@ final class DashboardViewModel {
         deviceModelName()
     }()
     let systemVersion = "iOS \(UIDevice.current.systemVersion)"
+    var usedSpace: Double = 0
+    var totalSpace: Double = 0
+    var usedPercent: Double = 0
     
-    init() { }
+    init() {
+        print("Storage%: \(storageUsagePercent())")
+    }
+    
+    // MARK: - Storage usage
+    
+    func storageUsagePercent() -> Double {
+        let attributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
+        guard let attributes, let total = attributes[.systemSize] as? NSNumber,
+              let free = attributes[.systemFreeSize] as? NSNumber else { return 0 }
+        totalSpace = total.doubleValue
+        let freeSpace = free.doubleValue
+        usedSpace = totalSpace - freeSpace
+        usedPercent = (usedSpace / totalSpace) * 100.0
+        return (usedSpace / totalSpace) * 100.0
+    }
     
     private func deviceModelName() -> String {
         var systemInfo = utsname()
@@ -74,7 +92,7 @@ final class DashboardViewModel {
         case "iPhone16,1": return "iPhone 15 Pro"
         case "iPhone16,2": return "iPhone 15 Pro Max"
             
-            // iPhone 16 lineup (2024)
+            // iPhone 16 lineup
         case "iPhone17,3": return "iPhone 16"
         case "iPhone17,4": return "iPhone 16 Plus"
         case "iPhone17,1": return "iPhone 16 Pro"
