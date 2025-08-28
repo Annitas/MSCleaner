@@ -8,11 +8,12 @@
 import SwiftUI
 
 struct DashboardView: View {
-    let phoneModel = "iPhone 14 Pro"
-    let iosVersion = "iOS 18.0"
-    let used: Double = 32.2
-    let total: Double = 128
-    let percent: Double = 0.38
+    private let viewModel = DashboardViewModel()
+    private let phoneModel: String
+    private let iosVersion: String
+    private let used: Double = 32.2
+    private let total: Double = 128
+    private let percent: Double = 0.38
     
     private var items: [MediaTitle] {
         [
@@ -32,6 +33,11 @@ struct DashboardView: View {
                        isLoading: false
                       )
         ]
+    }
+    
+    init() {
+        phoneModel = viewModel.phoneModel
+        iosVersion = viewModel.systemVersion
     }
     
     var body: some View {
