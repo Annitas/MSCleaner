@@ -8,7 +8,7 @@
 import Contacts
 
 final class ContactsManager {
-    func checkContactsPermission() -> Bool {
+    func hasAccessToContacts() -> Bool {
         let status = CNContactStore.authorizationStatus(for: .contacts)
         switch status {
         case .authorized:

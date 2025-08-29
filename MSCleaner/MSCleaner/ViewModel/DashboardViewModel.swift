@@ -10,6 +10,7 @@ import SwiftUI
 final class DashboardViewModel: ObservableObject {
     private let galeryManager = GalleryManager()
     private let contactsManager = ContactsManager()
+    private let eventsManager = CalendarEventsManager()
     lazy var phoneModel: String = {
         deviceModelName()
     }()
@@ -19,6 +20,7 @@ final class DashboardViewModel: ObservableObject {
     var usedPercent: Double = 0
     @Published var gallerySize: Double = 0
     var contactsCount: Int = 0
+    var eventsCount: Int = 0
     
     init() {
         storageUsagePercent()
@@ -35,12 +37,17 @@ final class DashboardViewModel: ObservableObject {
     
     func calculateContactsSize() {
         Task {
-            guard contactsManager.checkContactsPermission() else { return }
+            guard contactsManager.hasAccessToContacts() else { return }
             let contacts = await contactsManager.contactsCount()
             await MainActor.run {
                 contactsCount = contacts
             }
         }
+    }
+    
+    func calculateEventsSize() {
+        guard eventsManager.hasAccessToCalendar() else { return }
+        eventsCount = eventsManager.getEventsCount()
     }
     
     // MARK: - Storage usage

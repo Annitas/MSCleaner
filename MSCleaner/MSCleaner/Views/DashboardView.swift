@@ -24,7 +24,7 @@ struct DashboardView: View {
                       ),
             MediaTitle(imageName: "calendar",
                        title: "Calendar",
-                       size: "kek size",
+                       size: "\(viewModel.eventsCount)",
                        isLoading: false
                       )
         ]
