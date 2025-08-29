@@ -7,7 +7,15 @@
 
 import Foundation
 
-final class CacheService<Album: AlbumType> {
+protocol AlbumType {
+    var cacheFileName: String { get }
+}
+
+protocol IdentifiableByLocalID: Codable {
+    var localIdentifier: String { get }
+}
+
+final class CacheService {
     private let fileManager = FileManager.default
     private let documentsURL: URL
     
@@ -15,7 +23,7 @@ final class CacheService<Album: AlbumType> {
         documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
     
-    func save<T: Codable>(_ cache: T, for type: Album) {
+    func save<T: Codable>(_ cache: T, for type: AlbumType) {
         let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
         do {
             let data = try JSONEncoder().encode(cache) // CHECK
@@ -26,7 +34,7 @@ final class CacheService<Album: AlbumType> {
         }
     }
     
-    func load<T: Codable>(_ type: Album, as: T.Type) -> T? {
+    func load<T: Codable>(_ type: AlbumType, as: T.Type) -> T? {
         let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
         do {
             let data = try Data(contentsOf: fileURL)
@@ -38,21 +46,17 @@ final class CacheService<Album: AlbumType> {
         }
     }
     
-    func deletePhotosFromCache(for identifiers: [String], albumType: Album) {
-        guard var cached: [PhotoItem] = load(albumType, as: [PhotoItem].self) else {
-            print("⚠️ No cache found for \(albumType)")
-            return
-        }
-        
-        let beforeCount = cached.count
-        cached.removeAll { identifiers.contains($0.localIdentifier) }
-        let afterCount = cached.count
-        
-        if beforeCount != afterCount {
-            save(cached, for: albumType)
-            print("🗑️ Removed \(beforeCount - afterCount) items from cache for \(albumType)")
-        } else {
-            print("ℹ️ No matching items found in cache for \(albumType)")
+    func deleteFromCache<T: IdentifiableByLocalID>(identifiers: [String], for type: AlbumType, as modelType: T.Type) {
+        let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
+        do {
+            let data = try Data(contentsOf: fileURL)
+            var items = try JSONDecoder().decode([T].self, from: data)
+            items.removeAll { identifiers.contains($0.localIdentifier) }
+            let newData = try JSONEncoder().encode(items)
+            try newData.write(to: fileURL)
+            print("🗑 Deleted \(identifiers.count) items from \(type.cacheFileName)")
+        } catch {
+            print("❌ Error deleting from cache for \(type): \(error.localizedDescription)")
         }
     }
 }

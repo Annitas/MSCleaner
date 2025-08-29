@@ -43,7 +43,7 @@ final class VideoService {
     @Published var grouppedDuplicatedVideos: [[VideoItem]] = []
     @Published var assetSizes: Int64 = 0
     let albumType: VideoAlbumType
-    private let cacheService = CacheService<VideoAlbumType>()
+    private let cacheService = CacheService()
     private let grouppedService = MediaFetchingService()
     
     init(albumType: VideoAlbumType) {

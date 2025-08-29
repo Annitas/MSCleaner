@@ -8,7 +8,7 @@
 import SwiftUI
 import Photos
 
-struct PhotoItem: Identifiable, Codable {
+struct PhotoItem: IdentifiableByLocalID, Codable {
     var id = UUID()
     let localIdentifier: String
     let image: UIImage?

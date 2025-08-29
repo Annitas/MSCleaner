@@ -9,10 +9,6 @@ import Photos
 import Vision
 import SwiftUI
 
-protocol AlbumType {
-    var cacheFileName: String { get }
-}
-
 enum PhotoAlbumType: AlbumType {
     case screenshots
     case similarPhotos
@@ -44,7 +40,7 @@ final class PhotosService {
     @Published var groupedDuplicatedPhotos: [[PhotoItem]] = []
     @Published var assetSizes: Int64 = 0
     let albumType: PhotoAlbumType
-    private let cacheService = CacheService<PhotoAlbumType>()
+    private let cacheService = CacheService()
     private let grouppedService = MediaFetchingService()
     private let processingQueue = OperationQueue()
     

@@ -93,7 +93,7 @@ final class VideosViewModel: ObservableObject {
             }
         }
         guard !assetsToDelete.isEmpty else { return }
-        GalleryManager().deletePhotos(for: assetsToDelete, albumType: videoService.albumType) { [weak self] isSuccess in
+        GalleryManager().deleteAssets(for: assetsToDelete, albumType: videoService.albumType) { [weak self] isSuccess in
             if isSuccess {
                 self?.removeDeletedItems(assetsToDelete)
                 self?.resetSelection()

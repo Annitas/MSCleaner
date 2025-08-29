@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct VideoItem: Identifiable, Codable {
+struct VideoItem: IdentifiableByLocalID, Codable {
     let id: UUID
     let localIdentifier: String
     let images: [UIImage]

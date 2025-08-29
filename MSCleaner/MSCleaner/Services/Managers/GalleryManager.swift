@@ -34,7 +34,7 @@ final class GalleryManager {
         }
     }
     
-    func deletePhotos(for identifiers: [String], albumType: AlbumType, completion: @escaping (Bool) -> Void) {
+    func deleteAssets(for identifiers: [String], albumType: AlbumType, completion: @escaping (Bool) -> Void) {
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
         var assetArray: [PHAsset] = []
         assets.enumerateObjects { asset, _, _ in
