@@ -9,7 +9,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
-
+    
     private var items: [MediaTitle] {
         [
             MediaTitle(imageName: "photo.on.rectangle",
@@ -114,9 +114,15 @@ struct DashboardView: View {
                                 
                                 Spacer()
                                 
-                                Text(item.size)
-                                    .font(.caption)
-                                    .foregroundColor(item.size == "Need access" ? .blue : .secondary)
+                                if item.isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                                        .scaleEffect(0.7)
+                                } else {
+                                    Text(item.size)
+                                        .font(.caption)
+                                        .foregroundColor(item.size == "Need access" ? .blue : .secondary)
+                                }
                             }
                             .padding(.vertical, 12)
                         }
