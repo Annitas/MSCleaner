@@ -1,13 +1,13 @@
 //
-//  VideoCacheService.swift
+//  PhotoCacheService.swift
 //  MSCleaner
 //
-//  Created by Anita Stashevskaya on 25.08.2025.
+//  Created by Anita Stashevskaya on 22.08.2025.
 //
 
 import Foundation
 
-final class VideoCacheService {
+final class CacheService<Album: AlbumType> {
     private let fileManager = FileManager.default
     private let documentsURL: URL
     
@@ -15,7 +15,7 @@ final class VideoCacheService {
         documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
     
-    func save<T: Codable>(_ cache: T, for type: VideoAlbumType) {
+    func save<T: Codable>(_ cache: T, for type: Album) {
         let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
         do {
             let data = try JSONEncoder().encode(cache) // CHECK
@@ -26,7 +26,7 @@ final class VideoCacheService {
         }
     }
     
-    func load<T: Codable>(_ type: VideoAlbumType, as: T.Type) -> T? {
+    func load<T: Codable>(_ type: Album, as: T.Type) -> T? {
         let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
         do {
             let data = try Data(contentsOf: fileURL)
@@ -35,6 +35,24 @@ final class VideoCacheService {
         } catch {
             print("Error loading cache for \(type): \(error.localizedDescription)")
             return nil
+        }
+    }
+    
+    func deletePhotosFromCache(for identifiers: [String], albumType: Album) {
+        guard var cached: [PhotoItem] = load(albumType, as: [PhotoItem].self) else {
+            print("⚠️ No cache found for \(albumType)")
+            return
+        }
+        
+        let beforeCount = cached.count
+        cached.removeAll { identifiers.contains($0.localIdentifier) }
+        let afterCount = cached.count
+        
+        if beforeCount != afterCount {
+            save(cached, for: albumType)
+            print("🗑️ Removed \(beforeCount - afterCount) items from cache for \(albumType)")
+        } else {
+            print("ℹ️ No matching items found in cache for \(albumType)")
         }
     }
 }
