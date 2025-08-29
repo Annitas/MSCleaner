@@ -36,17 +36,22 @@ final class GalleryManager {
     
     func deleteAssets(for identifiers: [String], albumType: AlbumType, completion: @escaping (Bool) -> Void) {
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+        let cacheService = CacheService()
         var assetArray: [PHAsset] = []
         assets.enumerateObjects { asset, _, _ in
             assetArray.append(asset)
         }
-        
         PHPhotoLibrary.shared().performChanges({
             PHAssetChangeRequest.deleteAssets(assetArray as NSArray)
         }) { success, error in
             if success {
+                switch "\(albumType)" {
+                case "screenRecordings", "videoDuplicates", "largeVideos":
+                    cacheService.deleteFromCache(identifiers: identifiers, for: albumType, as: VideoItem.self)
+                default:
+                    cacheService.deleteFromCache(identifiers: identifiers, for: albumType, as: PhotoItem.self)
+                }
                 print("✅ Assets deleted")
-//                CacheService().deletePhotosFromCache(for: identifiers, albumType: albumType)
                 completion(success)
             } else {
                 print("❌ Failed to delete:", error?.localizedDescription ?? "unknown error")
