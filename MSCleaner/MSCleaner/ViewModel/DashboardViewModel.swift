@@ -7,8 +7,9 @@
 
 import SwiftUI
 
-final class DashboardViewModel {
+final class DashboardViewModel: ObservableObject {
     private let galeryManager = GalleryManager()
+    private let contactsManager = ContactsManager()
     lazy var phoneModel: String = {
         deviceModelName()
     }()
@@ -16,15 +17,29 @@ final class DashboardViewModel {
     var usedSpace: Double = 0
     var totalSpace: Double = 0
     var usedPercent: Double = 0
-    var gallerySize: Double = 0
+    @Published var gallerySize: Double = 0
+    var contactsCount: Int = 0
     
     init() {
         storageUsagePercent()
-        calculateGallerySize()
     }
     
-    private func calculateGallerySize() {
-        gallerySize = galeryManager.calculateGallerySize()
+    func calculateGallerySize() {
+        Task {
+            let size = await galeryManager.calculateGallerySize()
+            await MainActor.run {
+                self.gallerySize = size
+            }
+        }
+    }
+    
+    func calculateContactsSize() {
+        Task {
+            let contacts = await contactsManager.contactsCount()
+            await MainActor.run {
+                contactsCount = contacts
+            }
+        }
     }
     
     // MARK: - Storage usage

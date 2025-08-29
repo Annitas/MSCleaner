@@ -8,18 +8,25 @@
 import Photos
 
 final class GalleryManager {
-    func calculateGallerySize() -> Double {
-        var totalSize: Double = 0
-        let assets = PHAsset.fetchAssets(with: nil)
-        assets.enumerateObjects { asset, _, _ in
-            let resources = PHAssetResource.assetResources(for: asset)
-            for resource in resources {
-                if let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong {
-                    totalSize += Double(unsignedInt64)
+    func calculateGallerySize() async -> Double {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                var totalSize: Double = 0
+                let assets = PHAsset.fetchAssets(with: nil)
+                
+                assets.enumerateObjects { asset, _, _ in
+                    let resources = PHAssetResource.assetResources(for: asset)
+                    for resource in resources {
+                        if let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong {
+                            totalSize += Double(unsignedInt64)
+                        }
+                    }
                 }
+                
+                let sizeInGB = totalSize * pow(10.0, -9.0)
+                continuation.resume(returning: sizeInGB)
             }
         }
-        return totalSize * pow(10.0, -9.0)
     }
     
     func deletePhotos(for identifiers: [String], completion: @escaping (Bool) -> Void) {

@@ -8,13 +8,8 @@
 import SwiftUI
 
 struct DashboardView: View {
-    private let viewModel = DashboardViewModel()
-    private let phoneModel: String
-    private let iosVersion: String
-    private let used: Double
-    private let total: Double
-    private let percent: Double
-    
+    @StateObject private var viewModel = DashboardViewModel()
+
     private var items: [MediaTitle] {
         [
             MediaTitle(imageName: "photo.on.rectangle",
@@ -24,7 +19,7 @@ struct DashboardView: View {
                       ),
             MediaTitle(imageName: "person.2.fill",
                        title: "Contact",
-                       size: "kek size",
+                       size: "\(viewModel.contactsCount)",
                        isLoading: false
                       ),
             MediaTitle(imageName: "calendar",
@@ -35,13 +30,7 @@ struct DashboardView: View {
         ]
     }
     
-    init() {
-        phoneModel = viewModel.phoneModel
-        iosVersion = viewModel.systemVersion
-        used = viewModel.usedSpace
-        total = viewModel.totalSpace
-        percent = viewModel.usedPercent
-    }
+    init() { }
     
     var body: some View {
         NavigationView {
@@ -49,10 +38,10 @@ struct DashboardView: View {
                 // MARK: - Header
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(phoneModel)
+                        Text(viewModel.phoneModel)
                             .font(.title2).bold()
                             .foregroundColor(.white)
-                        Text(iosVersion)
+                        Text(viewModel.systemVersion)
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.8))
                     }
@@ -82,15 +71,15 @@ struct DashboardView: View {
                     Circle()
                         .stroke(Color.white.opacity(0.3), lineWidth: 12)
                     Circle()
-                        .trim(from: 0, to: percent/100)
+                        .trim(from: 0, to: viewModel.usedPercent/100)
                         .stroke(Color.white, style: StrokeStyle(lineWidth: 12, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     
                     VStack {
-                        Text("\(Int(percent))%")
+                        Text("\(Int(viewModel.usedPercent))%")
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(.white)
-                        Text(String(format: "%.1f / %.0f GB", used, total))
+                        Text(String(format: "%.1f / %.0f GB", viewModel.usedSpace, viewModel.totalSpace))
                             .foregroundColor(.white.opacity(0.8))
                     }
                 }
@@ -133,6 +122,10 @@ struct DashboardView: View {
                         }
                         .listRowBackground(Color.clear)
                     }
+                }
+                .onAppear {
+                    viewModel.calculateGallerySize()
+                    viewModel.calculateContactsSize()
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
