@@ -8,7 +8,7 @@
 import SwiftUI
 import Photos
 
-enum VideoAlbumType {
+enum VideoAlbumType: AlbumType {
     case screenRecordings
     case videoDuplicates
     case largeVideos
@@ -42,9 +42,9 @@ final class VideoService {
     @Published var isLoading = false
     @Published var grouppedDuplicatedVideos: [[VideoItem]] = []
     @Published var assetSizes: Int64 = 0
-    private let cacheService = VideoCacheService()
+    let albumType: VideoAlbumType
+    private let cacheService = CacheService<VideoAlbumType>()
     private let grouppedService = MediaFetchingService()
-    private let albumType: VideoAlbumType
     
     init(albumType: VideoAlbumType) {
         self.albumType = albumType

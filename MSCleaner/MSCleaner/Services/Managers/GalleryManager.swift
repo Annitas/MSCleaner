@@ -34,7 +34,7 @@ final class GalleryManager {
         }
     }
     
-    func deletePhotos(for identifiers: [String], albumType: PhotoAlbumType, completion: @escaping (Bool) -> Void) {
+    func deletePhotos(for identifiers: [String], albumType: AlbumType, completion: @escaping (Bool) -> Void) {
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
         var assetArray: [PHAsset] = []
         assets.enumerateObjects { asset, _, _ in
@@ -46,7 +46,7 @@ final class GalleryManager {
         }) { success, error in
             if success {
                 print("✅ Assets deleted")
-                PhotosCacheService().deletePhotosFromCache(for: identifiers, albumType: albumType)
+//                CacheService().deletePhotosFromCache(for: identifiers, albumType: albumType)
                 completion(success)
             } else {
                 print("❌ Failed to delete:", error?.localizedDescription ?? "unknown error")
