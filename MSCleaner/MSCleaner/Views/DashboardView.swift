@@ -15,17 +15,17 @@ struct DashboardView: View {
             MediaTitle(imageName: "photo.on.rectangle",
                        title: "Photos & Videos",
                        size: viewModel.gallerySize,
-                       isLoading: false
+                       isLoading: viewModel.gallerySize.isEmpty
                       ),
             MediaTitle(imageName: "person.2.fill",
                        title: "Contact",
                        size: viewModel.contactsCount,
-                       isLoading: false
+                       isLoading: viewModel.contactsCount.isEmpty
                       ),
             MediaTitle(imageName: "calendar",
                        title: "Calendar",
                        size: viewModel.eventsCount,
-                       isLoading: false
+                       isLoading: viewModel.eventsCount.isEmpty
                       )
         ]
     }
