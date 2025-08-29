@@ -35,6 +35,7 @@ final class DashboardViewModel: ObservableObject {
     
     func calculateContactsSize() {
         Task {
+            guard contactsManager.checkContactsPermission() else { return }
             let contacts = await contactsManager.contactsCount()
             await MainActor.run {
                 contactsCount = contacts

@@ -8,6 +8,18 @@
 import Contacts
 
 final class ContactsManager {
+    func checkContactsPermission() -> Bool {
+        let status = CNContactStore.authorizationStatus(for: .contacts)
+        switch status {
+        case .authorized:
+            return true
+        case .notDetermined, .restricted, .denied:
+            return false
+        default:
+            return false
+        }
+    }
+    
     func contactsCount() async -> Int {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
