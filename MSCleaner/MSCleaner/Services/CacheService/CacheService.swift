@@ -26,7 +26,7 @@ final class CacheService {
     func save<T: Codable>(_ cache: T, for type: AlbumType) {
         let fileURL = documentsURL.appendingPathComponent(type.cacheFileName)
         do {
-            let data = try JSONEncoder().encode(cache) // CHECK
+            let data = try JSONEncoder().encode(cache)
             try data.write(to: fileURL)
             print("Saved cache for \(type) to \(fileURL.lastPathComponent)")
         } catch {

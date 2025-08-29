@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Photos
 
 final class DashboardViewModel: ObservableObject {
     private let galeryManager = GalleryManager()
@@ -28,14 +29,16 @@ final class DashboardViewModel: ObservableObject {
     }
     
     func calculateGallerySize() {
-        guard galeryManager.hasAccessToGallery() else {
-            self.gallerySize = "Need access" // move permission request here
-            return
-        }
-        Task {
-            let size = await galeryManager.calculateGallerySize()
-            await MainActor.run {
-                self.gallerySize = String(format: "%.2f GB", size)
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
+            guard let self, status == .authorized || status == .limited else {
+                self?.gallerySize = "Need access" // move to main thread
+                return
+            }
+            Task {
+                let size = await self.galeryManager.calculateGallerySize()
+                await MainActor.run {
+                    self.gallerySize = String(format: "%.2f GB", size)
+                }
             }
         }
     }
