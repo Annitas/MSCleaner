@@ -35,7 +35,7 @@ final class DashboardViewModel: ObservableObject {
         Task {
             let size = await galeryManager.calculateGallerySize()
             await MainActor.run {
-                self.gallerySize = String(format: "%.2f GB", size)
+                self.gallerySize = String(format: "%.2f GB", size) // add cache in manager
             }
         }
     }
