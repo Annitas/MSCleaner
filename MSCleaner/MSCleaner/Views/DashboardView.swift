@@ -106,7 +106,7 @@ struct DashboardView: View {
                         NavigationLink(destination: destinationView(for: item.title)) {
                             HStack {
                                 Image(systemName: item.imageName)
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(item.size == "Need access" ? .secondary : .blue)
                                     .frame(width: 24, height: 24)
                                 
                                 Text(item.title)
