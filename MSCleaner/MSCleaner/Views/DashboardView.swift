@@ -14,17 +14,17 @@ struct DashboardView: View {
         [
             MediaTitle(imageName: "photo.on.rectangle",
                        title: "Photos & Videos",
-                       size: String(format: "%.2f GB", viewModel.gallerySize),
+                       size: viewModel.gallerySize,
                        isLoading: false
                       ),
             MediaTitle(imageName: "person.2.fill",
                        title: "Contact",
-                       size: "\(viewModel.contactsCount)",
+                       size: viewModel.contactsCount,
                        isLoading: false
                       ),
             MediaTitle(imageName: "calendar",
                        title: "Calendar",
-                       size: "\(viewModel.eventsCount)",
+                       size: viewModel.eventsCount,
                        isLoading: false
                       )
         ]
@@ -116,7 +116,7 @@ struct DashboardView: View {
                                 
                                 Text(item.size)
                                     .font(.caption)
-                                    .foregroundColor(item.isLoading ? .blue : .secondary)
+                                    .foregroundColor(item.size == "Need access" ? .blue : .secondary)
                             }
                             .padding(.vertical, 12)
                         }
@@ -126,6 +126,7 @@ struct DashboardView: View {
                 .onAppear {
                     viewModel.calculateGallerySize()
                     viewModel.calculateContactsSize()
+                    viewModel.calculateEventsSize()
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)

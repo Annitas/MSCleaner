@@ -18,36 +18,47 @@ final class DashboardViewModel: ObservableObject {
     var usedSpace: Double = 0
     var totalSpace: Double = 0
     var usedPercent: Double = 0
-    @Published var gallerySize: Double = 0
-    var contactsCount: Int = 0
-    var eventsCount: Int = 0
+    
+    @Published var gallerySize: String = ""
+    @Published var contactsCount: String = ""
+    @Published var eventsCount: String = ""
     
     init() {
         storageUsagePercent()
     }
     
     func calculateGallerySize() {
+        guard galeryManager.hasAccessToGallery() else {
+            self.gallerySize = "Need access" // move permission request here
+            return
+        }
         Task {
             let size = await galeryManager.calculateGallerySize()
             await MainActor.run {
-                self.gallerySize = size
+                self.gallerySize = String(format: "%.2f GB", size)
             }
         }
     }
     
     func calculateContactsSize() {
+        guard contactsManager.hasAccessToContacts() else {
+            contactsCount = "Need access"
+            return
+        }
         Task {
-            guard contactsManager.hasAccessToContacts() else { return }
             let contacts = await contactsManager.contactsCount()
             await MainActor.run {
-                contactsCount = contacts
+                contactsCount = "\(contacts)"
             }
         }
     }
     
     func calculateEventsSize() {
-        guard eventsManager.hasAccessToCalendar() else { return }
-        eventsCount = eventsManager.getEventsCount()
+        guard eventsManager.hasAccessToCalendar() else {
+            eventsCount = "Need access"
+            return
+        }
+        eventsCount = "\(eventsManager.getEventsCount())"
     }
     
     // MARK: - Storage usage

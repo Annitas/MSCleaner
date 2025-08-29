@@ -8,6 +8,11 @@
 import Photos
 
 final class GalleryManager {
+    func hasAccessToGallery() -> Bool {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        return status == .authorized || status == .limited
+    }
+    
     func calculateGallerySize() async -> Double {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
