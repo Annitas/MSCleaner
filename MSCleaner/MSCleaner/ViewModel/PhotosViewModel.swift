@@ -92,8 +92,9 @@ final class PhotosViewModel: ObservableObject {
             }
         }
         guard !assetsToDelete.isEmpty else { return }
-        GalleryManager().deletePhotos(for: assetsToDelete) { [weak self] isSuccess in
+        GalleryManager().deletePhotos(for: assetsToDelete, albumType: photoService.albumType) { [weak self] isSuccess in
             if isSuccess {
+                
                 self?.removeDeletedItems(assetsToDelete)
                 self?.resetSelection()
             }

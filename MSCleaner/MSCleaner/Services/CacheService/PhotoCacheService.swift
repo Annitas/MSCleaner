@@ -37,4 +37,22 @@ final class PhotosCacheService {
             return nil
         }
     }
+    
+    func deletePhotosFromCache(for identifiers: [String], albumType: PhotoAlbumType) {
+        guard var cached: [PhotoItem] = load(albumType, as: [PhotoItem].self) else {
+            print("⚠️ No cache found for \(albumType)")
+            return
+        }
+        
+        let beforeCount = cached.count
+        cached.removeAll { identifiers.contains($0.localIdentifier) }
+        let afterCount = cached.count
+        
+        if beforeCount != afterCount {
+            save(cached, for: albumType)
+            print("🗑️ Removed \(beforeCount - afterCount) items from cache for \(albumType)")
+        } else {
+            print("ℹ️ No matching items found in cache for \(albumType)")
+        }
+    }
 }

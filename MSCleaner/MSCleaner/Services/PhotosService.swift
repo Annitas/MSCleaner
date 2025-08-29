@@ -39,9 +39,9 @@ final class PhotosService {
     @Published var isLoading = false
     @Published var groupedDuplicatedPhotos: [[PhotoItem]] = []
     @Published var assetSizes: Int64 = 0
+    let albumType: PhotoAlbumType
     private let cacheService = PhotosCacheService()
     private let grouppedService = MediaFetchingService()
-    private let albumType: PhotoAlbumType
     private let processingQueue = OperationQueue()
     
     init(albumType: PhotoAlbumType) {
