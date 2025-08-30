@@ -30,7 +30,10 @@ struct AllowAccessView: View {
                 .padding(.bottom, 40)
             
             Button(action: {
-                print("Enable tapped")
+                if let url = URL(string: UIApplication.openSettingsURLString),
+                   UIApplication.shared.canOpenURL(url) {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
             }) {
                 Text("Enable Now")
                     .font(.headline)
